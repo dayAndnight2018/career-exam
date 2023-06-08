@@ -1,1 +1,1 @@
-{"RootDirectory":"/Users/dxm/Documents/career-exam","GitAddress":"https://codeup.aliyun.com/6407087cb6809992bb8f8289/learn/career-exam.git","PostDirectory":"/Users/dxm/Documents/career-exam/docs"}
+{"RootDirectory":"/Users/dxm/Documents/bake/career-exam","GitAddress":"https://github.com/dayAndnight2018/career-exam.git","PostDirectory":"/Users/dxm/Documents/bake/career-exam/docs"}
