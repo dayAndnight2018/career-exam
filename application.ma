@@ -1,1 +1,1 @@
-{"RootDirectory":"/Users/dxm/Documents/bake/career-exam","GitAddress":"https://github.com/dayAndnight2018/career-exam.git","PostDirectory":"/Users/dxm/Documents/bake/career-exam/docs"}
+{"RootDirectory":"/Users/dxm/Documents/bake/career-exam","GitAddress":"git@github.com:dayAndnight2018/career-exam.git","PostDirectory":"/Users/dxm/Documents/bake/career-exam/docs"}
