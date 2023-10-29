@@ -10,6 +10,12 @@
     </head>
     <body>
         <div id="app"></div>
+        <div class="window" :style="displayBtn">
+            <div class="mainWindow">
+                <img class="previewImage" :src="imageIcon">
+                <span class="closeBtn" @click="closeWindow">×</span>
+            </div>
+        </div>
         <script>
             window.$docsify = {
                 name: '',
