@@ -7,15 +7,18 @@
         <meta name="description" content="Description">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
         <link rel="stylesheet" href="//everspringlee.gitee.io/lib/css/vue.css">
+        <script src="//everspringlee.gitee.io/lib/js/vue.js"></script>
     </head>
     <body>
-        <div id="app"></div>
-        <div class="window" :style="displayBtn">
-            <div class="mainWindow">
-                <img class="previewImage" :src="imageIcon">
-                <span class="closeBtn" @click="closeWindow">×</span>
+        <div id="app">
+            <div class="window" :style="displayBtn">
+                <div class="mainWindow">
+                    <img class="previewImage" :src="imageIcon">
+                    <span class="closeBtn" @click="closeWindow">×</span>
+                </div>
             </div>
         </div>
+        
         <script>
             window.$docsify = {
                 name: '',
@@ -35,6 +38,42 @@
                     language:'chinese' 
                 }
             }
+
+            var vue = new Vue({
+                el: '#app',
+                data:{
+                    imageIcon: undefined,
+                    active: false,
+
+                },methods: {
+                    closeWindow: function () {
+                        this.active = !this.active;
+                        this.imageIcon = undefined;
+                    }
+                },
+                computed: {
+                    displayBtn() {
+                        return {
+                            '--display-btn': this.active ? 'block' : 'none'
+                        }
+                    },
+                    displayImage() {
+                        return {
+                            '--display-image': 'url(' + this.imageIcon + ')'
+                        }
+                    }
+                }
+            });
+
+            $(function(){
+                $("img").each(ele=>{
+                    $(ele).click(function(){
+                        vue.imageIcon = $(this).attr("src");
+                        vue.active = true;
+                    })
+                });
+        
+            });
         </script>
         <!-- Jquery -->
         <script src="//everspringlee.gitee.io/lib/js/jquery.js"></script>
