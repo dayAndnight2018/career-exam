@@ -6,10 +6,10 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <meta name="description" content="Description">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-        <link rel="stylesheet" href="//dayandnight2018.github.io/lib/css/vue.css">
-        <script src="//dayandnight2018.github.io/lib/js/vue.js"></script>
+        <link rel="stylesheet" href="../css/vue.css">
+        <script src="../js/vue.js"></script>
         <!-- Jquery -->
-        <script src="//dayandnight2018.github.io/lib/js/jquery.js"></script>
+        <script src="../js/jquery.js"></script>
     </head>
     <body>
         <div id="app">
@@ -34,13 +34,12 @@
                     depth: 3
                 },
                 count: {
-                    countable:true,
-                    fontsize:'0.9em',
-                    color:'rgb(90,90,90)',
-                    language:'chinese' 
+                    countable: true,
+                    fontsize: '0.9em',
+                    color: 'rgb(90,90,90)',
+                    language: 'chinese'
                 }
-            }
-            
+            };
 
             var vue = new Vue({
                 el: '#app',
@@ -68,31 +67,841 @@
             });
 
             $(function(){
-                $("img").each(ele=>{
-                    $(ele).click(function(){
+                $("img").each(function(ele){
+                    $(this).click(function(){
                         vue.imageIcon = $(this).attr("src");
                         vue.active = true;
-                    })
+                    });
                 });
-        
             });
         </script>
         <!-- Docsify v4 -->
-        <script src="//dayandnight2018.github.io/lib/js/docsify.js"></script>
+        <script src="../js/docsify.js"></script>
         <!-- emoji -->
-        <script src="//dayandnight2018.github.io/lib/js/emoji.js"></script>
+        <script src="../js/emoji.js"></script>
         <!-- search box -->
-        <script src="//dayandnight2018.github.io/lib/js/search.js"></script>
+        <script src="../js/search.js"></script>
         <!-- image -->
-        <script src="//dayandnight2018.github.io/lib/js/zoom.js"></script>
+        <script src="../js/zoom.js"></script>
         <!-- image -->
-        <script src="//dayandnight2018.github.io/lib/js/zoom-en.js"></script>
+        <script src="../js/zoom-en.js"></script>
         <!-- copy code -->
-        <script src="//dayandnight2018.github.io/lib/js/copy-code.js"></script>
+        <script src="../js/copy-code.js"></script>
         <!-- words count -->
-        <script src="//dayandnight2018.github.io/lib/js/count.js"></script>
+        <script src="../js/count.js"></script>
         <!-- code highlight -->
-        <script src="//dayandnight2018.github.io/lib/js/prism-java.js"></script>
-        <script src="//dayandnight2018.github.io/lib/js/speech.js"></script>
+        <script src="../js/prism-java.js"></script>
+        <script src="../js/speech.js"></script>
+        <script src="../js/reading-mode.js"></script>
+        
+        <!-- Export to PDF dependencies -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script>
+            
+            // Add export PDF button and reading mode buttons
+            function addExportPDFButtons() {
+                // Remove existing buttons if any
+                const existingButtons = document.querySelectorAll('.export-pdf-btn, .reading-mode-btn');
+                existingButtons.forEach(btn => btn.remove());
+                
+                // Create PDF export container
+                const pdfExportContainer = document.createElement('div');
+                pdfExportContainer.className = 'pdf-export-container';
+                pdfExportContainer.style.position = 'fixed';
+                pdfExportContainer.style.top = '20px';
+                pdfExportContainer.style.right = '20px';
+                pdfExportContainer.style.zIndex = '9999';
+                pdfExportContainer.style.display = 'flex';
+                pdfExportContainer.style.gap = '12px';
+                pdfExportContainer.style.flexDirection = 'column';
+                
+                // Create text-based PDF export button
+                const textExportBtn = document.createElement('button');
+                textExportBtn.className = 'export-pdf-btn text-pdf-btn';
+                textExportBtn.innerHTML = '📄 文字版PDF';
+                textExportBtn.style.padding = '14px 28px';
+                textExportBtn.style.backgroundColor = '#2563eb'; // 使用蓝色主题色
+                textExportBtn.style.color = 'white';
+                textExportBtn.style.border = 'none';
+                textExportBtn.style.borderRadius = '10px';
+                textExportBtn.style.cursor = 'pointer';
+                textExportBtn.style.fontSize = '15px';
+                textExportBtn.style.fontWeight = '700';
+                textExportBtn.style.boxShadow = '0 4px 16px rgba(37, 99, 235, 0.4)';
+                textExportBtn.style.transition = 'all 0.3s ease';
+                textExportBtn.style.width = '200px';
+                textExportBtn.style.textAlign = 'center';
+                textExportBtn.style.fontFamily = 'inherit';
+                
+                // Add hover effect for text button
+                textExportBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#1d4ed8';
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 6px 20px rgba(37, 99, 235, 0.5)';
+                });
+                
+                textExportBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#2563eb';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 16px rgba(37, 99, 235, 0.4)';
+                });
+                
+                // Create image-based PDF export button
+                const imageExportBtn = document.createElement('button');
+                imageExportBtn.className = 'export-pdf-btn image-pdf-btn';
+                imageExportBtn.innerHTML = '🖼️ 图片版PDF';
+                imageExportBtn.style.padding = '14px 28px';
+                imageExportBtn.style.backgroundColor = '#10b981'; // 使用绿色主题色
+                imageExportBtn.style.color = 'white';
+                imageExportBtn.style.border = 'none';
+                imageExportBtn.style.borderRadius = '10px';
+                imageExportBtn.style.cursor = 'pointer';
+                imageExportBtn.style.fontSize = '15px';
+                imageExportBtn.style.fontWeight = '700';
+                imageExportBtn.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.4)';
+                imageExportBtn.style.transition = 'all 0.3s ease';
+                imageExportBtn.style.width = '200px';
+                imageExportBtn.style.textAlign = 'center';
+                imageExportBtn.style.fontFamily = 'inherit';
+                
+                // Add hover effect for image button
+                imageExportBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#059669';
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+                });
+                
+                imageExportBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#10b981';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.4)';
+                });
+                
+                // Create reading mode button
+                const readingModeBtn = document.createElement('button');
+                readingModeBtn.className = 'export-pdf-btn reading-mode-btn';
+                readingModeBtn.innerHTML = '📖 阅读模式';
+                readingModeBtn.style.padding = '14px 28px';
+                readingModeBtn.style.backgroundColor = '#8b5cf6'; // 使用紫色主题色
+                readingModeBtn.style.color = 'white';
+                readingModeBtn.style.border = 'none';
+                readingModeBtn.style.borderRadius = '10px';
+                readingModeBtn.style.cursor = 'pointer';
+                readingModeBtn.style.fontSize = '15px';
+                readingModeBtn.style.fontWeight = '700';
+                readingModeBtn.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.4)';
+                readingModeBtn.style.transition = 'all 0.3s ease';
+                readingModeBtn.style.width = '200px';
+                readingModeBtn.style.textAlign = 'center';
+                readingModeBtn.style.fontFamily = 'inherit';
+                
+                // Add hover effect for reading mode button
+                readingModeBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#7c3aed';
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.5)';
+                });
+                
+                readingModeBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#8b5cf6';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.4)';
+                });
+                
+                // Create recitation mode button
+                const recitationModeBtn = document.createElement('button');
+                recitationModeBtn.className = 'export-pdf-btn reading-mode-btn';
+                recitationModeBtn.innerHTML = '🎤 背诵模式';
+                recitationModeBtn.style.padding = '14px 28px';
+                recitationModeBtn.style.backgroundColor = '#ec4899'; // 使用粉色主题色
+                recitationModeBtn.style.color = 'white';
+                recitationModeBtn.style.border = 'none';
+                recitationModeBtn.style.borderRadius = '10px';
+                recitationModeBtn.style.cursor = 'pointer';
+                recitationModeBtn.style.fontSize = '15px';
+                recitationModeBtn.style.fontWeight = '700';
+                recitationModeBtn.style.boxShadow = '0 4px 16px rgba(236, 72, 153, 0.4)';
+                recitationModeBtn.style.transition = 'all 0.3s ease';
+                recitationModeBtn.style.width = '200px';
+                recitationModeBtn.style.textAlign = 'center';
+                recitationModeBtn.style.fontFamily = 'inherit';
+                
+                // Add hover effect for recitation mode button
+                recitationModeBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#db2777';
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 6px 20px rgba(236, 72, 153, 0.5)';
+                });
+                
+                recitationModeBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#ec4899';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 16px rgba(236, 72, 153, 0.4)';
+                });
+                
+                // Append buttons to container
+                pdfExportContainer.appendChild(textExportBtn);
+                pdfExportContainer.appendChild(imageExportBtn);
+                pdfExportContainer.appendChild(readingModeBtn);
+                pdfExportContainer.appendChild(recitationModeBtn);
+                
+                // Append container to document instead of individual buttons
+                document.body.appendChild(pdfExportContainer);
+                
+                // Add event listeners for reading and recitation modes
+                readingModeBtn.addEventListener('click', function() {
+                    toggleReadingMode();
+                });
+                
+                recitationModeBtn.addEventListener('click', function() {
+                    toggleRecitationMode();
+                });
+                
+                // Text-based PDF export function
+                textExportBtn.addEventListener('click', function() {
+                    // Show loading indicator
+                    const originalText = textExportBtn.innerHTML;
+                    textExportBtn.innerHTML = '⏳ 正在生成文字版PDF...';
+                    textExportBtn.disabled = true;
+                    imageExportBtn.disabled = true; // Disable other button during export
+                    
+                    // Get content to export
+                    const content = document.querySelector('.markdown-section');
+                    if (!content) {
+                        alert('未找到要导出的内容');
+                        textExportBtn.innerHTML = originalText;
+                        textExportBtn.disabled = false;
+                        imageExportBtn.disabled = false;
+                        return;
+                    }
+                    
+                    // Apply temporary styles for A4 compatibility while preserving original styles
+                    const pdfStyle = document.createElement('style');
+                    pdfStyle.id = 'pdf-font-style';
+                    pdfStyle.textContent = `
+                        body {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                        }
+                        .markdown-section {
+                            width: 794px !important; /* 固定A4宽度 */
+                            max-width: 794px !important;
+                            margin: 0 auto !important;
+                            padding: 30px 50px !important; /* 调整内边距 */
+                            background: white !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        /* 保留原始标题样式 */
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                            border: inherit !important;
+                            text-align: inherit !important;
+                        }
+                        /* 保留原始段落样式 */
+                        p {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            text-align: inherit !important;
+                            text-indent: inherit !important;
+                        }
+                        /* 保留原始列表样式 */
+                        ul, ol {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        ul li, ol li {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        /* 保留原始代码样式 */
+                        pre, code {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            background: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            margin: inherit !important;
+                            border-radius: inherit !important;
+                        }
+                        /* 保留原始高亮样式 */
+                        mark {
+                            background: inherit !important;
+                            color: inherit !important;
+                            padding: inherit !important;
+                            border-radius: inherit !important;
+                            font-weight: inherit !important;
+                        }
+                        /* 保留原始链接样式 */
+                        a {
+                            color: inherit !important;
+                            text-decoration: inherit !important;
+                            font-weight: inherit !important;
+                        }
+                        /* 保留原始表格样式 */
+                        table {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            border-collapse: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        th, td {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            background: inherit !important;
+                        }
+                        /* 保留原始引用样式 */
+                        blockquote {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            margin: inherit !important;
+                            background: inherit !important;
+                            border-radius: inherit !important;
+                        }
+                    `;
+                    document.head.appendChild(pdfStyle);
+                    
+                    // Export as text-based PDF with improved styling
+                    try {
+                        // Create PDF document
+                        const { jsPDF } = window.jspdf;
+                        const pdf = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: 'a4'
+                        });
+                        
+                        // Set PDF styles (using Chinese supported font)
+                        pdf.setFontSize(14); // 增大基础字体大小
+                        
+                        // Page settings
+                        const pageWidth = 210; // A4 width in mm
+                        const pageHeight = 297; // A4 height in mm
+                        const margin = 20; // 页边距
+                        const maxWidth = pageWidth - 2 * margin; // 文本最大宽度
+                        
+                        // Text options
+                        const options = {
+                            align: 'left',
+                            maxWidth: maxWidth
+                        };
+                        
+                        let yPosition = margin; // 当前Y坐标
+                        let currentPage = 1;
+                        
+                        // Process elements recursively, preserving styles
+                        function processElement(element) {
+                            // Get computed styles
+                            const computedStyle = window.getComputedStyle(element);
+                            const tagName = element.tagName.toLowerCase();
+                            
+                            // Handle titles
+                            if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+                                // 为不同类型的标题设置不同的字体大小
+                                let fontSize = 14;
+                                if (tagName === 'h1') fontSize = 24;
+                                if (tagName === 'h2') fontSize = 20;
+                                if (tagName === 'h3') fontSize = 18;
+                                if (tagName === 'h4') fontSize = 16;
+                                if (tagName === 'h5') fontSize = 15;
+                                if (tagName === 'h6') fontSize = 14;
+                                
+                                // 标题使用更大的行高，确保不重叠
+                                const lineHeight = Math.max(fontSize * 0.6, 10); // 增大行高系数，最小10mm
+                                
+                                pdf.setFontSize(fontSize);
+                                
+                                const text = element.textContent.trim();
+                                const lines = pdf.splitTextToSize(text, maxWidth);
+                                
+                                // Check if page break is needed
+                                if (yPosition + lines.length * lineHeight > pageHeight - margin) {
+                                    pdf.addPage();
+                                    yPosition = margin;
+                                    currentPage++;
+                                    
+                                    if (currentPage > 100) {
+                                        alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                        return false;
+                                    }
+                                }
+                                
+                                // Add title text with extra margins
+                                lines.forEach(line => {
+                                    pdf.text(line, margin, yPosition, options);
+                                    yPosition += lineHeight;
+                                });
+                                
+                                yPosition += lineHeight; // Add extra spacing after title
+                                
+                                // Restore default font size
+                                pdf.setFontSize(14);
+                            }
+                            // Handle paragraphs
+                            else if (tagName === 'p') {
+                                // 段落使用适中的行高
+                                const fontSize = 13;
+                                const lineHeight = Math.max(fontSize * 0.55, 8); // 增大行高系数，最小8mm
+                                
+                                pdf.setFontSize(fontSize);
+                                
+                                const text = element.textContent.trim();
+                                if (text) {
+                                    const lines = pdf.splitTextToSize(text, maxWidth);
+                                    
+                                    // Check if page break is needed
+                                    if (yPosition + lines.length * lineHeight > pageHeight - margin) {
+                                        pdf.addPage();
+                                        yPosition = margin;
+                                        currentPage++;
+                                        
+                                        if (currentPage > 100) {
+                                            alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                            return false;
+                                        }
+                                    }
+                                    
+                                    // Add paragraph text
+                                    lines.forEach(line => {
+                                        pdf.text(line, margin, yPosition, options);
+                                        yPosition += lineHeight;
+                                    });
+                                    
+                                    yPosition += lineHeight / 2; // Add spacing after paragraph
+                                }
+                                
+                                // Restore default font size
+                                pdf.setFontSize(14);
+                            }
+                            // Handle lists
+                            else if (tagName === 'ul' || tagName === 'ol') {
+                                const items = element.querySelectorAll('li');
+                                const fontSize = 13;
+                                const lineHeight = Math.max(fontSize * 0.55, 8); // 增大行高系数，最小8mm
+                                
+                                pdf.setFontSize(fontSize);
+                                
+                                items.forEach(item => {
+                                    const text = item.textContent.trim();
+                                    if (text) {
+                                        // Check if page break is needed
+                                        if (yPosition + lineHeight > pageHeight - margin) {
+                                            pdf.addPage();
+                                            yPosition = margin;
+                                            currentPage++;
+                                            
+                                            if (currentPage > 100) {
+                                                alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                                return false;
+                                            }
+                                        }
+                                        
+                                        // Add list item with proper indentation
+                                        const listOptions = Object.assign({}, options, { maxWidth: maxWidth - 10 });
+                                        pdf.text('• ' + text, margin + 10, yPosition, listOptions);
+                                        yPosition += lineHeight;
+                                    }
+                                });
+                            }
+                            // Handle images in text-based PDF
+                            else if (tagName === 'img') {
+                                try {
+                                    // Calculate image dimensions
+                                    const imgWidth = maxWidth;
+                                    const imgHeight = (imgWidth * element.naturalHeight) / element.naturalWidth;
+                                    
+                                    // Check if image fits on current page
+                                    if (yPosition + imgHeight + margin > pageHeight - margin) {
+                                        pdf.addPage();
+                                        yPosition = margin;
+                                        currentPage++;
+                                        
+                                        if (currentPage > 100) {
+                                            alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                            return false;
+                                        }
+                                    }
+                                    
+                                    // Add image to PDF
+                                    pdf.addImage(element.src, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+                                    
+                                    // Update y position
+                                    yPosition += imgHeight + margin;
+                                } catch (error) {
+                                    console.error('Error adding image to PDF:', error);
+                                }
+                            }
+                            // Handle tables
+                            else if (tagName === 'table') {
+                                const rows = element.querySelectorAll('tr');
+                                const fontSize = parseInt(computedStyle.fontSize) || 12;
+                                const pdfFontSize = Math.max(10, Math.floor(fontSize * 0.75));
+                                
+                                // Table with appropriate line height
+                                const lineHeight = Math.max(pdfFontSize * 0.45, 6);
+                                
+                                pdf.setFontSize(pdfFontSize);
+                                
+                                rows.forEach(row => {
+                                    const cells = row.querySelectorAll('td, th');
+                                    const rowText = Array.from(cells).map(cell => cell.textContent.trim()).join(' | ');
+                                    
+                                    if (rowText) {
+                                        // Check if page break is needed
+                                        if (yPosition + lineHeight > pageHeight - margin) {
+                                            pdf.addPage();
+                                            yPosition = margin;
+                                            currentPage++;
+                                            
+                                            if (currentPage > 100) {
+                                                alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                                return false;
+                                            }
+                                        }
+                                        
+                                        // Add table row
+                                        pdf.text(rowText, margin, yPosition, options);
+                                yPosition += lineHeight;
+                            }
+                        });
+                    }
+
+                    // 处理代码块
+                    else if (tagName === 'pre' || tagName === 'code') {
+                        const fontSize = parseInt(computedStyle.fontSize) || 12;
+                        const pdfFontSize = Math.max(10, Math.floor(fontSize * 0.75));
+                        const lineHeight = Math.max(pdfFontSize * 0.5, 6);
+                        
+                        pdf.setFontSize(pdfFontSize);
+                        
+                        const text = element.textContent.trim();
+                        if (text) {
+                            // Check if page break is needed
+                            if (yPosition + lineHeight > pageHeight - margin) {
+                                pdf.addPage();
+                                yPosition = margin;
+                                currentPage++;
+                                
+                                if (currentPage > 100) {
+                                    alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                    return false;
+                                }
+                            }
+                            
+                            // Add code block text
+                            pdf.text(text, margin, yPosition, options);
+                            yPosition += lineHeight;
+                        }
+                    }
+                            
+                            // Recursively process child elements
+                            Array.from(element.children).forEach(child => processElement(child));
+                            return true;
+                        }
+                        
+                        // Process the content
+                        processElement(content);
+                        
+                        // Save the PDF
+                        pdf.save('职业考试笔记-文字版.pdf');
+                        
+                        // Remove temporary styles
+                        const tempStyle = document.getElementById('pdf-font-style');
+                        if (tempStyle) {
+                            document.head.removeChild(tempStyle);
+                        }
+                        
+                        // Restore button states
+                        textExportBtn.innerHTML = originalText;
+                        textExportBtn.disabled = false;
+                        imageExportBtn.disabled = false;
+                } catch (error) {
+                        console.error('PDF生成错误:', error);
+                        
+                        // Remove temporary styles
+                        const tempStyle = document.getElementById('pdf-font-style');
+                        if (tempStyle) {
+                            document.head.removeChild(tempStyle);
+                        }
+                        
+                        // Restore button states
+                        textExportBtn.disabled = false;
+                        textExportBtn.innerHTML = '📄 文字版PDF';
+                        imageExportBtn.disabled = false;
+                        
+                        // Show detailed error message
+                        if (error.message && error.message.includes('string length')) {
+                            alert('文档内容过长导致内存不足。建议：\n1. 尝试导出部分内容\n2. 减少图片数量\n3. 联系管理员优化文档结构');
+                        } else if (error.message && error.message.includes('Canvas尺寸过大')) {
+                            alert('文档内容过多，建议：\n1. 分章节导出\n2. 删除部分图片\n3. 联系技术支持');
+                        } else {
+                            alert('PDF导出失败：' + (error.message || '未知错误') + '\n请重试或联系管理员。');
+                        }
+                    }
+                });
+                
+                // Image-based PDF export function
+                imageExportBtn.addEventListener('click', function() {
+                    // Show loading indicator
+                    const originalText = imageExportBtn.innerHTML;
+                    imageExportBtn.innerHTML = '⏳ 正在生成图片版PDF...';
+                    imageExportBtn.disabled = true;
+                    textExportBtn.disabled = true; // Disable other button during export
+                    
+                    // Get content to export
+                    const content = document.querySelector('.markdown-section');
+                    if (!content) {
+                        alert('未找到要导出的内容');
+                        imageExportBtn.innerHTML = originalText;
+                        imageExportBtn.disabled = false;
+                        textExportBtn.disabled = false;
+                        return;
+                    }
+                    
+                    // Apply temporary styles for A4 compatibility while preserving original styles
+                    const pdfStyle = document.createElement('style');
+                    pdfStyle.id = 'pdf-font-style';
+                    pdfStyle.textContent = `
+                        body {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                        }
+                        .markdown-section {
+                            width: 794px !important; /* 固定A4宽度 */
+                            max-width: 794px !important;
+                            margin: 0 auto !important;
+                            padding: 30px 50px !important; /* 调整内边距 */
+                            background: white !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        /* 保留原始标题样式 */
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                            border: inherit !important;
+                            text-align: inherit !important;
+                        }
+                        /* 保留原始段落样式 */
+                        p {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            text-align: inherit !important;
+                            text-indent: inherit !important;
+                        }
+                        /* 保留原始列表样式 */
+                        ul, ol {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        ul li, ol li {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        /* 保留原始代码样式 */
+                        pre, code {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            background: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            margin: inherit !important;
+                            border-radius: inherit !important;
+                        }
+                        /* 保留原始高亮样式 */
+                        mark {
+                            background: inherit !important;
+                            color: inherit !important;
+                            padding: inherit !important;
+                            border-radius: inherit !important;
+                            font-weight: inherit !important;
+                        }
+                        /* 保留原始链接样式 */
+                        a {
+                            color: inherit !important;
+                            text-decoration: inherit !important;
+                            font-weight: inherit !important;
+                        }
+                        /* 保留原始表格样式 */
+                        table {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            border-collapse: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        th, td {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            background: inherit !important;
+                        }
+                        /* 保留原始引用样式 */
+                        blockquote {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            margin: inherit !important;
+                            background: inherit !important;
+                            border-radius: inherit !important;
+                        }
+                    `;
+                    document.head.appendChild(pdfStyle);
+                    
+                    // Export as image-based PDF using html2canvas
+                    try {
+                        // Capture content as image with html2canvas at higher quality
+                        html2canvas(content, {
+                            scale: 3, // Increase scale to 3 for much better quality
+                            useCORS: true, // Allow cross-origin images
+                            windowWidth: content.scrollWidth,
+                            windowHeight: content.scrollHeight,
+                            backgroundColor: '#ffffff' // Ensure white background
+                        }).then(canvas => {
+                            // Convert canvas to image data
+                            const imgData = canvas.toDataURL('image/jpeg', 0.95); // 0.95 quality for better image clarity
+                            
+                            // Create PDF document
+                            const { jsPDF } = window.jspdf;
+                            const pdf = new jsPDF('p', 'mm', 'a4');
+                            
+                            // Page dimensions
+                            const pageWidth = pdf.internal.pageSize.getWidth();
+                            const pageHeight = pdf.internal.pageSize.getHeight();
+                            
+                            // Calculate image dimensions
+                            const imgWidth = pageWidth;
+                            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                            
+                            // Add first page
+                            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+                            
+                            // Handle multiple pages if needed
+                            let remainingHeight = imgHeight - pageHeight;
+                            let page = 1;
+                            
+                            while (remainingHeight > 0) {
+                                pdf.addPage();
+                                pdf.addImage(imgData, 'JPEG', 0, -pageHeight * page, imgWidth, imgHeight);
+                                remainingHeight -= pageHeight;
+                                page++;
+                                
+                                if (page > 100) {
+                                    alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                    break;
+                                }
+                            }
+                            // Save the PDF
+                            pdf.save('职业考试笔记-图片版.pdf');
+                            
+                            // Remove temporary styles
+                            const tempStyle = document.getElementById('pdf-font-style');
+                            if (tempStyle) {
+                                document.head.removeChild(tempStyle);
+                            }
+                            
+                            // Restore button states
+                            imageExportBtn.innerHTML = originalText;
+                            imageExportBtn.disabled = false;
+                            textExportBtn.disabled = false;
+                            
+                        }).catch(error => {
+                            throw error;
+                        });
+                        
+                    } catch (error) {
+                        console.error('PDF生成错误:', error);
+                        
+                        // Remove temporary styles
+                        const tempStyle = document.getElementById('pdf-font-style');
+                        if (tempStyle) {
+                            document.head.removeChild(tempStyle);
+                        }
+                        
+                        // Restore button states
+                        imageExportBtn.disabled = false;
+                        imageExportBtn.innerHTML = '🖼️ 图片版PDF';
+                        textExportBtn.disabled = false;
+                        
+                        // Show error message
+                        alert('PDF导出失败：' + (error.message || '未知错误') + '\n请重试或联系管理员。');
+                    }
+                });
+                
+                // Append buttons to document
+                document.body.appendChild(textExportBtn);
+                document.body.appendChild(imageExportBtn);
+            }
+            
+            // Check if .markdown-section exists
+            function checkContentLoaded() {
+                const content = document.querySelector('.markdown-section');
+                if (content) {
+                    addExportPDFButtons();
+                } else {
+                    // Check again in 500ms
+                    setTimeout(checkContentLoaded, 500);
+                }
+            }
+            
+            // Start checking after DOM is loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                checkContentLoaded();
+            });
+            
+            // Also check when hash changes (Docsify page navigation)
+            window.addEventListener('hashchange', function() {
+                checkContentLoaded();
+            });
+        </script>
     </body>
 </html>
