@@ -22,7 +22,8 @@
         highlightedIndex: 0,
         isMatching: false,
         matchTimeout: null,
-        progress: 0
+        progress: 0,
+        lastTranscript: ''
     };
     
     // 创建语音识别实例
@@ -61,6 +62,33 @@
         });
         
         return textContent;
+    }
+    
+    // 显示语音识别结果
+    function showRecognitionResult(transcript, isMatch) {
+        // 创建或获取结果显示容器
+        let resultContainer = document.getElementById('recognition-result-container');
+        if (!resultContainer) {
+            resultContainer = document.createElement('div');
+            resultContainer.id = 'recognition-result-container';
+            resultContainer.className = 'recognition-result-container';
+            document.body.appendChild(resultContainer);
+        }
+        
+        // 更新结果内容和样式
+        resultContainer.textContent = transcript;
+        resultContainer.className = `recognition-result-container ${isMatch ? 'match' : 'no-match'}`;
+        
+        // 保存最后一次识别结果
+        window.readingMode.lastTranscript = transcript;
+    }
+    
+    // 隐藏语音识别结果
+    function hideRecognitionResult() {
+        const resultContainer = document.getElementById('recognition-result-container');
+        if (resultContainer) {
+            document.body.removeChild(resultContainer);
+        }
     }
     
     // 开始阅读模式
@@ -167,6 +195,9 @@
         // 隐藏进度条
         hideProgressBar();
         
+        // 隐藏语音识别结果
+        hideRecognitionResult();
+        
         // 更新状态
         window.readingMode.isActive = false;
         window.readingMode.isRecitationMode = false;
@@ -181,10 +212,13 @@
         const transcript = lastResult[0].transcript.trim();
         const isFinal = lastResult.isFinal;
         
-        // 只处理最终结果
-        if (!isFinal) return;
-        
         console.log('识别结果:', transcript);
+        
+        // 显示临时结果
+        if (!isFinal) {
+            showRecognitionResult(transcript, false);
+            return;
+        }
         
         // 匹配当前句子
         matchCurrentSentence(transcript);
@@ -205,7 +239,12 @@
         console.log('匹配度:', matchScore, '识别文本:', normalizedTranscript, '目标文本:', normalizedSentence);
         
         // 如果匹配度超过80%，则认为匹配成功
-        if (matchScore > 0.8) {
+        const isMatch = matchScore > 0.8;
+        
+        // 显示识别结果
+        showRecognitionResult(transcript, isMatch);
+        
+        if (isMatch) {
             // 匹配成功，高亮当前句子
             highlightMatchedSentence();
             
@@ -438,6 +477,37 @@
                 width: 0%;
                 transition: width 0.3s ease;
                 box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+            }
+            
+            /* 语音识别结果样式 */
+            .recognition-result-container {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: rgba(255, 255, 255, 0.95);
+                padding: 15px 25px;
+                border-radius: 30px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                font-size: 16px;
+                font-weight: 600;
+                z-index: 999999;
+                min-width: 300px;
+                max-width: 80%;
+                text-align: center;
+                transition: all 0.3s ease;
+            }
+            
+            .recognition-result-container.match {
+                color: #10b981;
+                border: 2px solid #10b981;
+                box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+            }
+            
+            .recognition-result-container.no-match {
+                color: #ef4444;
+                border: 2px solid #ef4444;
+                box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
             }
         `;
         

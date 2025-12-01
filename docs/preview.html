@@ -34,13 +34,12 @@
                     depth: 3
                 },
                 count: {
-                    countable:true,
-                    fontsize:'0.9em',
-                    color:'rgb(90,90,90)',
-                    language:'chinese' 
+                    countable: true,
+                    fontsize: '0.9em',
+                    color: 'rgb(90,90,90)',
+                    language: 'chinese'
                 }
-            }
-            
+            };
 
             var vue = new Vue({
                 el: '#app',
@@ -68,13 +67,12 @@
             });
 
             $(function(){
-                $("img").each(ele=>{
-                    $(ele).click(function(){
+                $("img").each(function(ele){
+                    $(this).click(function(){
                         vue.imageIcon = $(this).attr("src");
                         vue.active = true;
-                    })
+                    });
                 });
-        
             });
         </script>
         <!-- Docsify v4 -->
@@ -94,5 +92,331 @@
         <!-- code highlight -->
         <script src="../js/prism-java.js"></script>
         <script src="../js/speech.js"></script>
+        <script src="../js/reading-mode.js"></script>
+        
+        <!-- Export to PDF dependencies -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script>
+            
+            // Add export PDF button and reading mode buttons
+            function addExportPDFButtons() {
+                // Remove existing buttons if any
+                const existingButtons = document.querySelectorAll('.export-pdf-btn, .reading-mode-btn, .recitation-mode-btn');
+                existingButtons.forEach(btn => btn.remove());
+                
+                // Create PDF export container
+                const pdfExportContainer = document.createElement('div');
+                pdfExportContainer.className = 'pdf-export-container';
+                pdfExportContainer.style.position = 'fixed';
+                pdfExportContainer.style.top = '20px';
+                pdfExportContainer.style.right = '20px';
+                pdfExportContainer.style.zIndex = '9999';
+                pdfExportContainer.style.display = 'flex';
+                pdfExportContainer.style.gap = '12px';
+                pdfExportContainer.style.flexDirection = 'column';
+                
+                // Create image-based PDF export button
+                const imageExportBtn = document.createElement('button');
+                imageExportBtn.className = 'export-pdf-btn image-pdf-btn';
+                imageExportBtn.innerHTML = '🖼️ 图片版PDF';
+                imageExportBtn.style.padding = '14px 28px';
+                imageExportBtn.style.backgroundColor = '#10b981'; // 使用绿色主题色
+                imageExportBtn.style.color = 'white';
+                imageExportBtn.style.border = 'none';
+                imageExportBtn.style.borderRadius = '10px';
+                imageExportBtn.style.cursor = 'pointer';
+                imageExportBtn.style.fontSize = '15px';
+                imageExportBtn.style.fontWeight = '700';
+                imageExportBtn.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.4)';
+                imageExportBtn.style.transition = 'all 0.3s ease';
+                imageExportBtn.style.width = '200px';
+                imageExportBtn.style.textAlign = 'center';
+                imageExportBtn.style.fontFamily = 'inherit';
+                
+                // Add hover effect for image button
+                imageExportBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#059669';
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+                });
+                
+                imageExportBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#10b981';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.4)';
+                });
+                
+                // Create reading mode button
+                const readingModeBtn = document.createElement('button');
+                readingModeBtn.className = 'export-pdf-btn reading-mode-btn';
+                readingModeBtn.innerHTML = '📖 阅读模式';
+                readingModeBtn.style.padding = '14px 28px';
+                readingModeBtn.style.backgroundColor = '#8b5cf6'; // 使用紫色主题色
+                readingModeBtn.style.color = 'white';
+                readingModeBtn.style.border = 'none';
+                readingModeBtn.style.borderRadius = '10px';
+                readingModeBtn.style.cursor = 'pointer';
+                readingModeBtn.style.fontSize = '15px';
+                readingModeBtn.style.fontWeight = '700';
+                readingModeBtn.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.4)';
+                readingModeBtn.style.transition = 'all 0.3s ease';
+                readingModeBtn.style.width = '200px';
+                readingModeBtn.style.textAlign = 'center';
+                readingModeBtn.style.fontFamily = 'inherit';
+                
+                // Add hover effect for reading mode button
+                readingModeBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#7c3aed';
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.5)';
+                });
+                
+                readingModeBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#8b5cf6';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.4)';
+                });
+                
+                // Append buttons to container
+                pdfExportContainer.appendChild(imageExportBtn);
+                pdfExportContainer.appendChild(readingModeBtn);
+                
+                // Append container to document
+                document.body.appendChild(pdfExportContainer);
+                
+                // Add event listeners for reading mode
+                readingModeBtn.addEventListener('click', function() {
+                    toggleReadingMode();
+                });
+                
+                // Image-based PDF export function
+                imageExportBtn.addEventListener('click', function() {
+                    // Show loading indicator
+                    const originalText = imageExportBtn.innerHTML;
+                    imageExportBtn.innerHTML = '⏳ 正在生成图片版PDF...';
+                    imageExportBtn.disabled = true;
+                    
+                    // Get content to export
+                    const content = document.querySelector('.markdown-section');
+                    if (!content) {
+                        alert('未找到要导出的内容');
+                        imageExportBtn.innerHTML = originalText;
+                        imageExportBtn.disabled = false;
+                        return;
+                    }
+                    
+                    // Apply temporary styles for A4 compatibility while preserving original styles
+                    const pdfStyle = document.createElement('style');
+                    pdfStyle.id = 'pdf-font-style';
+                    pdfStyle.textContent = `
+                        body {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                        }
+                        .markdown-section {
+                            width: 794px !important; /* 固定A4宽度 */
+                            max-width: 794px !important;
+                            margin: 0 auto !important;
+                            padding: 30px 50px !important; /* 调整内边距 */
+                            background: white !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        /* 保留原始标题样式 */
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                            border: inherit !important;
+                            text-align: inherit !important;
+                        }
+                        /* 保留原始段落样式 */
+                        p {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            text-align: inherit !important;
+                            text-indent: inherit !important;
+                        }
+                        /* 保留原始列表样式 */
+                        ul, ol {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        ul li, ol li {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        /* 保留原始代码样式 */
+                        pre, code {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            line-height: inherit !important;
+                            color: inherit !important;
+                            background: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            margin: inherit !important;
+                            border-radius: inherit !important;
+                        }
+                        /* 保留原始高亮样式 */
+                        mark {
+                            background: inherit !important;
+                            color: inherit !important;
+                            padding: inherit !important;
+                            border-radius: inherit !important;
+                            font-weight: inherit !important;
+                        }
+                        /* 保留原始链接样式 */
+                        a {
+                            color: inherit !important;
+                            text-decoration: inherit !important;
+                            font-weight: inherit !important;
+                        }
+                        /* 保留原始表格样式 */
+                        table {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            border-collapse: inherit !important;
+                            margin: inherit !important;
+                            padding: inherit !important;
+                        }
+                        th, td {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            background: inherit !important;
+                        }
+                        /* 保留原始引用样式 */
+                        blockquote {
+                            font-family: inherit !important;
+                            font-size: inherit !important;
+                            color: inherit !important;
+                            border: inherit !important;
+                            padding: inherit !important;
+                            margin: inherit !important;
+                            background: inherit !important;
+                            border-radius: inherit !important;
+                        }
+                    `;
+                    document.head.appendChild(pdfStyle);
+                    
+                    // Export as image-based PDF using html2canvas
+                    try {
+                        // Capture content as image with html2canvas at higher quality
+                        html2canvas(content, {
+                            scale: 3, // Increase scale to 3 for much better quality
+                            useCORS: true, // Allow cross-origin images
+                            windowWidth: content.scrollWidth,
+                            windowHeight: content.scrollHeight,
+                            backgroundColor: '#ffffff' // Ensure white background
+                        }).then(canvas => {
+                            // Convert canvas to image data
+                            const imgData = canvas.toDataURL('image/jpeg', 0.95); // 0.95 quality for better image clarity
+                            
+                            // Create PDF document
+                            const { jsPDF } = window.jspdf;
+                            const pdf = new jsPDF('p', 'mm', 'a4');
+                            
+                            // Page dimensions
+                            const pageWidth = pdf.internal.pageSize.getWidth();
+                            const pageHeight = pdf.internal.pageSize.getHeight();
+                            
+                            // Calculate image dimensions
+                            const imgWidth = pageWidth;
+                            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                            
+                            // Add first page
+                            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+                            
+                            // Handle multiple pages if needed
+                            let remainingHeight = imgHeight - pageHeight;
+                            let page = 1;
+                            
+                            while (remainingHeight > 0) {
+                                pdf.addPage();
+                                pdf.addImage(imgData, 'JPEG', 0, -pageHeight * page, imgWidth, imgHeight);
+                                remainingHeight -= pageHeight;
+                                page++;
+                                
+                                if (page > 100) {
+                                    alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
+                                    break;
+                                }
+                            }
+                            // Save the PDF
+                            pdf.save('职业考试笔记-图片版.pdf');
+                            
+                            // Remove temporary styles
+                            const tempStyle = document.getElementById('pdf-font-style');
+                            if (tempStyle) {
+                                document.head.removeChild(tempStyle);
+                            }
+                            
+                            // Restore button states
+                            imageExportBtn.innerHTML = originalText;
+                            imageExportBtn.disabled = false;
+                            
+                        }).catch(error => {
+                            throw error;
+                        });
+                        
+                    } catch (error) {
+                        console.error('PDF生成错误:', error);
+                        
+                        // Remove temporary styles
+                        const tempStyle = document.getElementById('pdf-font-style');
+                        if (tempStyle) {
+                            document.head.removeChild(tempStyle);
+                        }
+                        
+                        // Restore button states
+                        imageExportBtn.disabled = false;
+                        imageExportBtn.innerHTML = '🖼️ 图片版PDF';
+                        
+                        // Show error message
+                        alert('PDF导出失败：' + (error.message || '未知错误') + '\n请重试或联系管理员。');
+                    }
+                });
+            }
+            
+            // Check if .markdown-section exists
+            function checkContentLoaded() {
+                const content = document.querySelector('.markdown-section');
+                if (content) {
+                    addExportPDFButtons();
+                } else {
+                    // Check again in 500ms
+                    setTimeout(checkContentLoaded, 500);
+                }
+            }
+            
+            // Start checking after DOM is loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                checkContentLoaded();
+            });
+            
+            // Also check when hash changes (Docsify page navigation)
+            window.addEventListener('hashchange', function() {
+                checkContentLoaded();
+            });
+        </script>
     </body>
 </html>
