@@ -6,10 +6,10 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <meta name="description" content="Description">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-        <link rel="stylesheet" href="//dayandnight2018.github.io/lib/css/vue.css">
-        <script src="//dayandnight2018.github.io/lib/js/vue.js"></script>
+        <link rel="stylesheet" href="../css/vue.css">
+        <script src="../js/vue.js"></script>
         <!-- Jquery -->
-        <script src="//dayandnight2018.github.io/lib/js/jquery.js"></script>
+        <script src="../js/jquery.js"></script>
     </head>
     <body>
         <div id="app">
@@ -76,23 +76,23 @@
             });
         </script>
         <!-- Docsify v4 -->
-        <script src="//dayandnight2018.github.io/lib/js/docsify.js"></script>
+        <script src="../js/docsify.js"></script>
         <!-- emoji -->
-        <script src="//dayandnight2018.github.io/lib/js/emoji.js"></script>
+        <script src="../js/emoji.js"></script>
         <!-- search box -->
-        <script src="//dayandnight2018.github.io/lib/js/search.js"></script>
+        <script src="../js/search.js"></script>
         <!-- image -->
-        <script src="//dayandnight2018.github.io/lib/js/zoom.js"></script>
+        <script src="../js/zoom.js"></script>
         <!-- image -->
-        <script src="//dayandnight2018.github.io/lib/js/zoom-en.js"></script>
+        <script src="../js/zoom-en.js"></script>
         <!-- copy code -->
-        <script src="//dayandnight2018.github.io/lib/js/copy-code.js"></script>
+        <script src="../js/copy-code.js"></script>
         <!-- words count -->
-        <script src="//dayandnight2018.github.io/lib/js/count.js"></script>
+        <script src="../js/count.js"></script>
         <!-- code highlight -->
-        <script src="//dayandnight2018.github.io/lib/js/prism-java.js"></script>
-        <script src="//dayandnight2018.github.io/lib/js/speech.js"></script>
-        <script src="//dayandnight2018.github.io/lib/js/reading-mode.js"></script>
+        <script src="../js/prism-java.js"></script>
+        <script src="../js/speech.js"></script>
+        <script src="../js/reading-mode.js"></script>
         
         <!-- Export to PDF dependencies -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -101,93 +101,203 @@
             
             // Add export PDF button and reading mode buttons
             function addExportPDFButtons() {
-                // Remove existing buttons if any
-                const existingButtons = document.querySelectorAll('.export-pdf-btn, .reading-mode-btn, .recitation-mode-btn');
-                existingButtons.forEach(btn => btn.remove());
+                // Remove existing buttons and containers if any
+                const existingElements = document.querySelectorAll('.export-pdf-btn, .reading-mode-btn, .recitation-mode-btn, .pdf-export-container, .control-panel-container');
+                existingElements.forEach(el => el.remove());
                 
-                // Create PDF export container
-                const pdfExportContainer = document.createElement('div');
-                pdfExportContainer.className = 'pdf-export-container';
-                pdfExportContainer.style.position = 'fixed';
-                pdfExportContainer.style.top = '20px';
-                pdfExportContainer.style.right = '20px';
-                pdfExportContainer.style.zIndex = '9999';
-                pdfExportContainer.style.display = 'flex';
-                pdfExportContainer.style.gap = '12px';
-                pdfExportContainer.style.flexDirection = 'column';
+                // Create control panel container
+                const controlPanelContainer = document.createElement('div');
+                controlPanelContainer.className = 'control-panel-container';
+                controlPanelContainer.innerHTML = `
+                    <div class="control-panel-header" onclick="toggleControlPanel()">
+                        <span class="control-panel-title">📋 控制面板</span>
+                        <span class="control-panel-toggle">▼</span>
+                    </div>
+                    <div class="control-panel-content" id="controlPanelContent">
+                        <div class="control-panel-buttons"></div>
+                    </div>
+                `;
+                
+                // Set styles for control panel
+                controlPanelContainer.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 9999;
+                    background-color: rgba(255, 255, 255, 0.95);
+                    border-radius: 10px;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+                    font-family: inherit;
+                    font-size: 13px;
+                    transition: all 0.3s ease;
+                    max-width: 200px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                `;
+                
+                // Set styles for control panel header
+                const header = controlPanelContainer.querySelector('.control-panel-header');
+                header.style.cssText = `
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 15px;
+                    cursor: pointer;
+                    border-radius: 10px;
+                    background-color: #f8f9fa;
+                    font-weight: 600;
+                    color: #495057;
+                    transition: all 0.3s ease;
+                `;
+                
+                // Set styles for control panel toggle
+                const toggle = controlPanelContainer.querySelector('.control-panel-toggle');
+                toggle.style.cssText = `
+                    transition: transform 0.3s ease;
+                    font-size: 11px;
+                `;
+                
+                // Set styles for control panel content
+                const content = controlPanelContainer.querySelector('.control-panel-content');
+                content.style.cssText = `
+                    padding: 0;
+                    max-height: 0;
+                    overflow: hidden;
+                    transition: all 0.3s ease;
+                `;
+                
+                // Set styles for control panel buttons
+                const buttonsContainer = controlPanelContainer.querySelector('.control-panel-buttons');
+                buttonsContainer.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    padding: 15px;
+                `;
                 
                 // Create image-based PDF export button
                 const imageExportBtn = document.createElement('button');
                 imageExportBtn.className = 'export-pdf-btn image-pdf-btn';
-                imageExportBtn.innerHTML = '🖼️ 图片版PDF';
-                imageExportBtn.style.padding = '14px 28px';
-                imageExportBtn.style.backgroundColor = '#10b981'; // 使用绿色主题色
-                imageExportBtn.style.color = 'white';
-                imageExportBtn.style.border = 'none';
-                imageExportBtn.style.borderRadius = '10px';
-                imageExportBtn.style.cursor = 'pointer';
-                imageExportBtn.style.fontSize = '15px';
-                imageExportBtn.style.fontWeight = '700';
-                imageExportBtn.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.4)';
-                imageExportBtn.style.transition = 'all 0.3s ease';
-                imageExportBtn.style.width = '200px';
-                imageExportBtn.style.textAlign = 'center';
-                imageExportBtn.style.fontFamily = 'inherit';
+                imageExportBtn.innerHTML = '🖼️ PDF';
+                imageExportBtn.style.cssText = `
+                    padding: 8px 16px;
+                    background-color: #10b981;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 600;
+                    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+                    transition: all 0.3s ease;
+                    width: 100%;
+                    text-align: center;
+                    font-family: inherit;
+                `;
                 
                 // Add hover effect for image button
                 imageExportBtn.addEventListener('mouseenter', function() {
                     this.style.backgroundColor = '#059669';
-                    this.style.transform = 'translateY(-3px)';
-                    this.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+                    this.style.transform = 'translateY(-1px)';
+                    this.style.boxShadow = '0 3px 12px rgba(16, 185, 129, 0.4)';
                 });
                 
                 imageExportBtn.addEventListener('mouseleave', function() {
                     this.style.backgroundColor = '#10b981';
                     this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.4)';
+                    this.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
                 });
                 
                 // Create reading mode button
                 const readingModeBtn = document.createElement('button');
                 readingModeBtn.className = 'export-pdf-btn reading-mode-btn';
-                readingModeBtn.innerHTML = '📖 阅读模式';
-                readingModeBtn.style.padding = '14px 28px';
-                readingModeBtn.style.backgroundColor = '#8b5cf6'; // 使用紫色主题色
-                readingModeBtn.style.color = 'white';
-                readingModeBtn.style.border = 'none';
-                readingModeBtn.style.borderRadius = '10px';
-                readingModeBtn.style.cursor = 'pointer';
-                readingModeBtn.style.fontSize = '15px';
-                readingModeBtn.style.fontWeight = '700';
-                readingModeBtn.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.4)';
-                readingModeBtn.style.transition = 'all 0.3s ease';
-                readingModeBtn.style.width = '200px';
-                readingModeBtn.style.textAlign = 'center';
-                readingModeBtn.style.fontFamily = 'inherit';
+                readingModeBtn.innerHTML = '📖 阅读';
+                readingModeBtn.style.cssText = `
+                    padding: 8px 16px;
+                    background-color: #8b5cf6;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 600;
+                    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+                    transition: all 0.3s ease;
+                    width: 100%;
+                    text-align: center;
+                    font-family: inherit;
+                `;
                 
                 // Add hover effect for reading mode button
                 readingModeBtn.addEventListener('mouseenter', function() {
                     this.style.backgroundColor = '#7c3aed';
-                    this.style.transform = 'translateY(-3px)';
-                    this.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.5)';
+                    this.style.transform = 'translateY(-1px)';
+                    this.style.boxShadow = '0 3px 12px rgba(139, 92, 246, 0.4)';
                 });
                 
                 readingModeBtn.addEventListener('mouseleave', function() {
                     this.style.backgroundColor = '#8b5cf6';
                     this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '0 4px 16px rgba(139, 92, 246, 0.4)';
+                    this.style.boxShadow = '0 2px 8px rgba(139, 92, 246, 0.3)';
                 });
                 
-                // Append buttons to container
-                pdfExportContainer.appendChild(imageExportBtn);
-                pdfExportContainer.appendChild(readingModeBtn);
+                // Create read this page button
+                const readThisPageBtn = document.createElement('button');
+                readThisPageBtn.className = 'read-this-page-btn';
+                readThisPageBtn.innerHTML = '🔊 阅读本页';
+                readThisPageBtn.style.cssText = `
+                    padding: 8px 16px;
+                    background-color: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 600;
+                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                    transition: all 0.3s ease;
+                    width: 100%;
+                    text-align: center;
+                    font-family: inherit;
+                `;
                 
-                // Append container to document
-                document.body.appendChild(pdfExportContainer);
+                // Add hover effect for read this page button
+                readThisPageBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#2563eb';
+                    this.style.transform = 'translateY(-1px)';
+                    this.style.boxShadow = '0 3px 12px rgba(59, 130, 246, 0.4)';
+                });
+                
+                readThisPageBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#3b82f6';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+                });
+                
+                // Append buttons to control panel
+                buttonsContainer.appendChild(imageExportBtn);
+                buttonsContainer.appendChild(readingModeBtn);
+                buttonsContainer.appendChild(readThisPageBtn);
+                
+                // Append control panel to document
+                document.body.appendChild(controlPanelContainer);
                 
                 // Add event listeners for reading mode
                 readingModeBtn.addEventListener('click', function() {
                     toggleReadingMode();
+                });
+                
+                // Add event listener for read this page
+                readThisPageBtn.addEventListener('click', function() {
+                    // Check if speech.js has initSpeechControls function
+                    if (typeof initSpeechControls === 'function') {
+                        initSpeechControls();
+                        // Start reading if possible
+                        if (typeof startReading === 'function') {
+                            startReading();
+                        }
+                    } else {
+                        alert('阅读功能正在加载中，请稍候重试');
+                    }
                 });
                 
                 // Image-based PDF export function
@@ -210,110 +320,185 @@
                     const pdfStyle = document.createElement('style');
                     pdfStyle.id = 'pdf-font-style';
                     pdfStyle.textContent = `
+                        /* 基础样式重置 */
                         body {
                             margin: 0 !important;
                             padding: 0 !important;
                             background: white !important;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
                         }
+                        
+                        /* 主要内容容器样式 */
                         .markdown-section {
                             width: 794px !important; /* 固定A4宽度 */
                             max-width: 794px !important;
                             margin: 0 auto !important;
-                            padding: 30px 50px !important; /* 调整内边距 */
+                            padding: 25px !important;
                             background: white !important;
                             box-shadow: none !important;
                             border: none !important;
+                            color: #333 !important;
+                            line-height: 1.6 !important;
                         }
-                        /* 保留原始标题样式 */
-                        h1, h2, h3, h4, h5, h6 {
-                            font-family: inherit !important;
-                            color: inherit !important;
-                            margin: inherit !important;
-                            padding: inherit !important;
-                            border: inherit !important;
-                            text-align: inherit !important;
+                        
+                        /* 标题样式 */
+                        h1 {
+                            font-size: 24px !important;
+                            font-weight: bold !important;
+                            color: #2c3e50 !important;
+                            margin: 24px 0 16px 0 !important;
+                            padding-bottom: 8px !important;
+                            border-bottom: 2px solid #e0e0e0 !important;
                         }
-                        /* 保留原始段落样式 */
+                        
+                        h2 {
+                            font-size: 20px !important;
+                            font-weight: bold !important;
+                            color: #34495e !important;
+                            margin: 20px 0 14px 0 !important;
+                            padding-bottom: 6px !important;
+                            border-bottom: 1px solid #e0e0e0 !important;
+                        }
+                        
+                        h3 {
+                            font-size: 18px !important;
+                            font-weight: bold !important;
+                            color: #34495e !important;
+                            margin: 18px 0 12px 0 !important;
+                        }
+                        
+                        h4, h5, h6 {
+                            font-size: 16px !important;
+                            font-weight: bold !important;
+                            color: #34495e !important;
+                            margin: 16px 0 10px 0 !important;
+                        }
+                        
+                        /* 段落样式 */
                         p {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            line-height: inherit !important;
-                            color: inherit !important;
-                            margin: inherit !important;
-                            text-align: inherit !important;
-                            text-indent: inherit !important;
+                            font-size: 14px !important;
+                            line-height: 1.6 !important;
+                            color: #333 !important;
+                            margin: 12px 0 !important;
+                            text-align: justify !important;
+                            text-indent: 28px !important;
                         }
-                        /* 保留原始列表样式 */
+                        
+                        /* 列表样式 */
                         ul, ol {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            line-height: inherit !important;
-                            color: inherit !important;
-                            margin: inherit !important;
-                            padding: inherit !important;
+                            font-size: 14px !important;
+                            line-height: 1.6 !important;
+                            color: #333 !important;
+                            margin: 12px 0 !important;
+                            padding-left: 24px !important;
                         }
+                        
                         ul li, ol li {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            line-height: inherit !important;
-                            color: inherit !important;
-                            margin: inherit !important;
-                            padding: inherit !important;
+                            margin: 8px 0 !important;
+                            padding-left: 8px !important;
                         }
-                        /* 保留原始代码样式 */
-                        pre, code {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            line-height: inherit !important;
-                            color: inherit !important;
-                            background: inherit !important;
-                            border: inherit !important;
-                            padding: inherit !important;
-                            margin: inherit !important;
-                            border-radius: inherit !important;
+                        
+                        /* 代码样式 */
+                        pre {
+                            background-color: #f6f8fa !important;
+                            border: 1px solid #e1e4e8 !important;
+                            border-radius: 6px !important;
+                            padding: 16px !important;
+                            margin: 16px 0 !important;
+                            overflow: auto !important;
+                            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;
                         }
-                        /* 保留原始高亮样式 */
-                        mark {
-                            background: inherit !important;
-                            color: inherit !important;
-                            padding: inherit !important;
-                            border-radius: inherit !important;
-                            font-weight: inherit !important;
+                        
+                        code {
+                            background-color: #f6f8fa !important;
+                            border: 1px solid #e1e4e8 !important;
+                            border-radius: 3px !important;
+                            padding: 2px 6px !important;
+                            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;
+                            font-size: 13px !important;
+                            color: #e83e8c !important;
                         }
-                        /* 保留原始链接样式 */
+                        
+                        pre code {
+                            background-color: transparent !important;
+                            border: none !important;
+                            padding: 0 !important;
+                            color: #24292e !important;
+                        }
+                        
+                        /* 链接样式 */
                         a {
-                            color: inherit !important;
-                            text-decoration: inherit !important;
-                            font-weight: inherit !important;
+                            color: #0366d6 !important;
+                            text-decoration: none !important;
                         }
-                        /* 保留原始表格样式 */
+                        
+                        a:hover {
+                            text-decoration: underline !important;
+                        }
+                        
+                        /* 表格样式 */
                         table {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            color: inherit !important;
-                            border: inherit !important;
-                            border-collapse: inherit !important;
-                            margin: inherit !important;
-                            padding: inherit !important;
+                            width: 100% !important;
+                            border-collapse: collapse !important;
+                            margin: 16px 0 !important;
+                            font-size: 14px !important;
                         }
+                        
                         th, td {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            color: inherit !important;
-                            border: inherit !important;
-                            padding: inherit !important;
-                            background: inherit !important;
+                            border: 1px solid #e1e4e8 !important;
+                            padding: 8px 12px !important;
+                            text-align: left !important;
                         }
-                        /* 保留原始引用样式 */
+                        
+                        th {
+                            background-color: #f6f8fa !important;
+                            font-weight: bold !important;
+                            color: #24292e !important;
+                        }
+                        
+                        /* 引用样式 */
                         blockquote {
-                            font-family: inherit !important;
-                            font-size: inherit !important;
-                            color: inherit !important;
-                            border: inherit !important;
-                            padding: inherit !important;
-                            margin: inherit !important;
-                            background: inherit !important;
-                            border-radius: inherit !important;
+                            border-left: 4px solid #dfe2e5 !important;
+                            padding: 10px 16px !important;
+                            margin: 16px 0 !important;
+                            background-color: #f8f9fa !important;
+                            color: #6a737d !important;
+                            font-style: italic !important;
+                        }
+                        
+                        /* 强调样式 */
+                        strong {
+                            font-weight: bold !important;
+                            color: #d73a49 !important;
+                        }
+                        
+                        em {
+                            font-style: italic !important;
+                        }
+                        
+                        /* 列表项符号 */
+                        ul li {
+                            list-style-type: disc !important;
+                        }
+                        
+                        ol li {
+                            list-style-type: decimal !important;
+                        }
+                        
+                        /* 图片样式 */
+                        img {
+                            max-width: 100% !important;
+                            height: auto !important;
+                            margin: 16px auto !important;
+                            display: block !important;
+                            border-radius: 4px !important;
+                        }
+                        
+                        /* 水平分隔线 */
+                        hr {
+                            border: 0 !important;
+                            border-top: 1px solid #eaecef !important;
+                            margin: 24px 0 !important;
                         }
                     `;
                     document.head.appendChild(pdfStyle);
@@ -412,6 +597,24 @@
             document.addEventListener('DOMContentLoaded', function() {
                 checkContentLoaded();
             });
+            
+            // Toggle control panel visibility
+            function toggleControlPanel() {
+                const content = document.getElementById('controlPanelContent');
+                const toggle = document.querySelector('.control-panel-toggle');
+                
+                if (content && toggle) {
+                    if (content.style.maxHeight === '' || content.style.maxHeight === '0px') {
+                        // Expand the panel
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        toggle.style.transform = 'rotate(180deg)';
+                    } else {
+                        // Collapse the panel
+                        content.style.maxHeight = '0px';
+                        toggle.style.transform = 'rotate(0deg)';
+                    }
+                }
+            }
             
             // Also check when hash changes (Docsify page navigation)
             window.addEventListener('hashchange', function() {
