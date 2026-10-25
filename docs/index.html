@@ -340,78 +340,115 @@
                     
                     // Export as image-based PDF using html2canvas
                     try {
-                        // Capture content as image with html2canvas at higher quality
+                        const scale = 3;
+
+                        // A4 pixel height at the content width (794px) with A4 aspect ratio 210:297
+                        const pagePixelHeight = Math.round(794 * 297 / 210);
+
+                        // Collect Y-positions of all direct child block-element boundaries
+                        // so we can snap page breaks between elements instead of slicing text.
+                        const contentRect = content.getBoundingClientRect();
+                        const elementBoundaries = [];
+                        for (const child of content.children) {
+                            const rect = child.getBoundingClientRect();
+                            elementBoundaries.push({
+                                top: rect.top - contentRect.top,
+                                bottom: rect.bottom - contentRect.top
+                            });
+                        }
+
+                        // Capture content as a single full-height image
                         html2canvas(content, {
-                            scale: 3, // Increase scale to 3 for much better quality
-                            useCORS: true, // Allow cross-origin images
+                            scale: scale,
+                            useCORS: true,
                             windowWidth: content.scrollWidth,
                             windowHeight: content.scrollHeight,
-                            backgroundColor: '#ffffff' // Ensure white background
+                            backgroundColor: '#ffffff'
                         }).then(canvas => {
-                            // Convert canvas to image data
-                            const imgData = canvas.toDataURL('image/jpeg', 0.95); // 0.95 quality for better image clarity
-                            
-                            // Create PDF document
+                            const totalCanvasHeight = canvas.height;
+                            // Convert page height to canvas (scaled) coordinates
+                            const pageCanvasHeight = pagePixelHeight * scale;
+
+                            // Build page-break Y positions (in canvas coordinates).
+                            // Each break is snapped to the nearest element boundary so text
+                            // rows are never cut in half.
+                            const breakPoints = [0];
+                            let nextBreak = pageCanvasHeight;
+                            while (nextBreak < totalCanvasHeight) {
+                                let bestY = nextBreak;
+                                let bestDist = Infinity;
+                                for (const b of elementBoundaries) {
+                                    const scaledBottom = b.bottom * scale;
+                                    const dist = Math.abs(scaledBottom - nextBreak);
+                                    // Only consider boundaries within a reasonable search window
+                                    if (dist < pageCanvasHeight * 0.25 && dist < bestDist) {
+                                        bestDist = dist;
+                                        bestY = scaledBottom;
+                                    }
+                                }
+                                breakPoints.push(bestY);
+                                nextBreak = bestY + pageCanvasHeight;
+                            }
+                            breakPoints.push(totalCanvasHeight);
+
+                            // Create PDF
                             const { jsPDF } = window.jspdf;
                             const pdf = new jsPDF('p', 'mm', 'a4');
-                            
-                            // Page dimensions
-                            const pageWidth = pdf.internal.pageSize.getWidth();
-                            const pageHeight = pdf.internal.pageSize.getHeight();
-                            
-                            // Calculate image dimensions
-                            const imgWidth = pageWidth;
-                            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                            
-                            // Add first page
-                            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                            
-                            // Handle multiple pages if needed
-                            let remainingHeight = imgHeight - pageHeight;
-                            let page = 1;
-                            
-                            while (remainingHeight > 0) {
-                                pdf.addPage();
-                                pdf.addImage(imgData, 'JPEG', 0, -pageHeight * page, imgWidth, imgHeight);
-                                remainingHeight -= pageHeight;
-                                page++;
-                                
-                                if (page > 100) {
+                            const pageWidthMM = pdf.internal.pageSize.getWidth();
+                            const pageHeightMM = pdf.internal.pageSize.getHeight();
+                            const imgWidthMM = pageWidthMM;
+
+                            // Draw each page slice onto a temporary canvas, then add to PDF
+                            for (let i = 0; i < breakPoints.length - 1; i++) {
+                                const sliceY = breakPoints[i];
+                                const sliceHeight = breakPoints[i + 1] - sliceY;
+                                const sliceCanvas = document.createElement('canvas');
+                                sliceCanvas.width = canvas.width;
+                                sliceCanvas.height = sliceHeight;
+                                const ctx = sliceCanvas.getContext('2d');
+                                ctx.drawImage(canvas,
+                                    0, sliceY, canvas.width, sliceHeight,
+                                    0, 0, canvas.width, sliceHeight
+                                );
+                                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+                                const sliceImgHeightMM = (sliceHeight * imgWidthMM) / canvas.width;
+
+                                if (i === 0) {
+                                    pdf.addImage(sliceData, 'JPEG', 0, 0, imgWidthMM, sliceImgHeightMM);
+                                } else {
+                                    pdf.addPage();
+                                    pdf.addImage(sliceData, 'JPEG', 0, 0, imgWidthMM, sliceImgHeightMM);
+                                }
+
+                                if (i > 100) {
                                     alert('文档内容过多，已自动截断。建议分章节导出以获得完整内容。');
                                     break;
                                 }
                             }
-                            // Save the PDF
+
                             pdf.save('职业考试笔记-图片版.pdf');
-                            
-                            // Remove temporary styles
+
+                            // Clean up
                             const tempStyle = document.getElementById('pdf-font-style');
                             if (tempStyle) {
                                 document.head.removeChild(tempStyle);
                             }
-                            
-                            // Restore button states
                             imageExportBtn.innerHTML = originalText;
                             imageExportBtn.disabled = false;
-                            
+
                         }).catch(error => {
                             throw error;
                         });
-                        
+
                     } catch (error) {
                         console.error('PDF生成错误:', error);
-                        
-                        // Remove temporary styles
+
                         const tempStyle = document.getElementById('pdf-font-style');
                         if (tempStyle) {
                             document.head.removeChild(tempStyle);
                         }
-                        
-                        // Restore button states
                         imageExportBtn.disabled = false;
-                        imageExportBtn.innerHTML = '🖼️ 图片版PDF';
-                        
-                        // Show error message
+                        imageExportBtn.innerHTML = '🖼️ PDF';
                         alert('PDF导出失败：' + (error.message || '未知错误') + '\n请重试或联系管理员。');
                     }
                 });
