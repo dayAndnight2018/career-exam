@@ -444,7 +444,7 @@
                 checkContentLoaded();
             });
         </script>
-        <!-- ==================== 朗读控制卡片（右下角，可隐藏）—— 控件与功能沿用原 speech.js 卡片 ==================== -->
+        <!-- ==================== 朗读控制卡片（右下角，可隐藏）—— 控件沿用原 speech.js 卡片，支持朗读进度高亮 ==================== -->
         <style>
             #speech-card{position:fixed;right:10px;bottom:10px;z-index:9999;width:270px;background:rgba(255,255,255,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);font-family:inherit;font-size:13px;color:#495057}
             #speech-card .sc-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-radius:10px 10px 0 0;background:#f8f9fa;font-weight:600}
@@ -458,6 +458,8 @@
             #speech-card label{display:block;margin:10px 0 4px}
             #speech-card select{width:100%;padding:6px 8px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;color:#495057}
             #speech-card input[type=range]{width:100%}
+            /* 朗读进度高亮：当前句与正文明显区分 */
+            .markdown-section .sc-reading{background-color:rgba(255,235,59,.6);color:#c62828;font-weight:600;border-radius:3px;box-shadow:0 1px 6px rgba(255,193,7,.45);transition:background-color .25s ease,color .25s ease}
         </style>
         <div id="speech-card" style="display:none">
             <div class="sc-hd"><span>🔊 朗读控制</span><span class="sc-x" title="隐藏卡片">×</span></div>
@@ -477,8 +479,8 @@
             </div>
         </div>
         <script>
-            // 右下角朗读控制卡片：开始/暂停/继续/停止 + 音色/语速/音调（与原 speech.js 卡片一致）
-            // 由右上角「阅读本页」呼出；× 隐藏；切换页面自动停止
+            // 右下角朗读控制卡片：开始/暂停/继续/停止 + 音色/语速/音调
+            // 朗读进度高亮：当前句加 .sc-reading（黄底红字加粗），读完自动恢复；自动滚动跟随
             (function() {
                 var card = document.getElementById('speech-card');
                 var toggleBtn = document.getElementById('speech-toggle');
@@ -490,7 +492,7 @@
                 var rateVal = document.getElementById('speech-rate-val');
                 var pitchInput = document.getElementById('speech-pitch');
                 var pitchVal = document.getElementById('speech-pitch-val');
-                var queue = [], gen = 0;
+                var sentences = [], cursor = 0, gen = 0;
 
                 // 音色列表：中文优先（偏好 晓晓/Xiaoxiao），分隔线后列英文，与原卡片一致
                 function fillVoices() {
@@ -537,38 +539,118 @@
                     toggleBtn.disabled = t; pauseBtn.disabled = p; resumeBtn.disabled = r; stopBtn.disabled = s;
                 }
 
+                // ---------- 朗读进度高亮 ----------
+                var wrapped = [];   // 当前包裹的高亮 span，用于恢复原样
+
+                function collectText(root) {
+                    var nodes = [], stream = '';
+                    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                        acceptNode: function(n) {
+                            if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                            var p = n.parentElement;
+                            if (!p) return NodeFilter.FILTER_REJECT;
+                            var tag = p.tagName;
+                            if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    });
+                    var n;
+                    while ((n = walker.nextNode())) {
+                        nodes.push({ node: n, start: stream.length });
+                        stream += n.nodeValue;
+                    }
+                    return { nodes: nodes, stream: stream };
+                }
+
+                function clearHighlight() {
+                    wrapped.forEach(function(span) {
+                        var parent = span.parentNode;
+                        if (!parent) return;
+                        parent.replaceChild(document.createTextNode(span.textContent), span);
+                        parent.normalize();
+                    });
+                    wrapped = [];
+                }
+
+                // 高亮 stream 中 [start,end) 区间：按文本节点切分并包裹 span
+                function highlightRange(nodes, start, end) {
+                    clearHighlight();
+                    for (var i = 0; i < nodes.length; i++) {
+                        var rec = nodes[i], nLen = rec.node.nodeValue.length;
+                        var nStart = rec.start, nEnd = rec.start + nLen;
+                        if (nEnd <= start) continue;
+                        if (nStart >= end) break;
+                        var s = Math.max(start, nStart) - nStart;
+                        var e = Math.min(end, nEnd) - nStart;
+                        if (e <= s) continue;
+                        var node = rec.node;
+                        if (e < node.nodeValue.length) node.splitText(e);
+                        if (s > 0) node = node.splitText(s);
+                        var span = document.createElement('span');
+                        span.className = 'sc-reading';
+                        node.parentNode.replaceChild(span, node);
+                        span.appendChild(node);
+                        wrapped.push(span);
+                    }
+                    if (wrapped.length) {
+                        var top = wrapped[0].getBoundingClientRect().top;
+                        // 仅当高亮句离开可视区域时滚动跟随，减少打扰
+                        if (top < 60 || top > window.innerHeight - 120) {
+                            wrapped[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        }
+                    }
+                }
+
+                // ---------- 句子切分与朗读 ----------
+                function splitSentences(s) {
+                    var out = [], re = /[^。！？!?；;.]+[。！？!?；;.]*\s*/g, m;
+                    while ((m = re.exec(s))) {
+                        if (m[0].trim().length > 1) out.push(m[0]);
+                        if (re.lastIndex === m.index) re.lastIndex++;
+                    }
+                    return out;
+                }
+
                 function reset() {
-                    gen++; queue = [];
+                    gen++; sentences = []; cursor = 0;
+                    clearHighlight();
                     setState(false, true, true, true);
                 }
 
                 function speakNext() {
-                    if (!queue.length) { reset(); return; }
-                    var text = queue.shift();
-                    if (!text) { speakNext(); return; }
+                    if (!sentences.length) { reset(); return; }
+                    var sent = sentences.shift();
                     var myGen = gen;
-                    var u = new SpeechSynthesisUtterance(text);
+                    // 在正文中定位该句并高亮（每次重新收集，避免 DOM 结构变化导致偏移失效）
+                    var map = collectText(document.querySelector('.markdown-section') || document.body);
+                    var start = map.stream.indexOf(sent, cursor);
+                    if (start === -1) start = map.stream.indexOf(sent);
+                    if (start >= 0) highlightRange(map.nodes, start, start + sent.length);
+                    cursor = (start >= 0 ? start : 0) + sent.length;
+
+                    var u = new SpeechSynthesisUtterance(sent.replace(/\s+/g, ' ').trim());
                     var v = currentVoice();
                     if (v) { u.voice = v; u.lang = v.lang; }
                     u.rate = parseFloat(rateInput.value) || 1;
                     u.pitch = parseFloat(pitchInput.value) || 1;
-                    u.onend = function() { if (myGen === gen) speakNext(); };
-                    u.onerror = function() { if (myGen === gen) reset(); };
+                    u.onend = function() { if (myGen === gen) speakNext(); };       // 读完切下一句，高亮随之更新
+                    u.onerror = function() { if (myGen === gen) reset(); };         // 出错恢复原样
                     speechSynthesis.speak(u);
                 }
 
                 toggleBtn.onclick = function() {
                     var sec = document.querySelector('.markdown-section');
                     if (!sec) { alert('未找到要朗读的内容'); return; }
-                    reset();   // 使上一轮队列与回调失效
+                    reset();   // 使上一轮队列、回调与高亮失效
                     var text = sec.textContent.replace(/\s+/g, ' ').trim();
                     if (!text) { alert('当前页面没有可朗读的文字'); return; }
                     // 分句排队朗读，避免长文本被浏览器 TTS 截断
-                    queue = text.split(/(?<=[。！？!?；;.])\s*/).filter(function(s) { return s.length > 1; });
+                    sentences = splitSentences(sec.textContent);
+                    if (!sentences.length) sentences = [text];
                     setState(true, false, true, false);
                     speakNext();
                 };
-                pauseBtn.onclick = function() { speechSynthesis.pause(); setState(true, true, false, false); };
+                pauseBtn.onclick = function() { speechSynthesis.pause(); setState(true, true, false, false); };   // 暂停时保留高亮，便于看到读到哪
                 resumeBtn.onclick = function() { speechSynthesis.resume(); setState(true, false, true, false); };
                 stopBtn.onclick = function() { speechSynthesis.cancel(); reset(); };
 
@@ -580,7 +662,7 @@
                     reset();
                     card.style.display = 'none';
                 };
-                // 切换页面（docsify hash 路由）时停止朗读
+                // 切换页面（docsify hash 路由）时停止朗读并恢复高亮
                 window.addEventListener('hashchange', function() { speechSynthesis.cancel(); reset(); });
             })();
         </script>
