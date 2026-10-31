@@ -286,18 +286,9 @@
                     toggleReadingMode();
                 });
                 
-                // Add event listener for read this page
+                // Add event listener for read this page —— 呼出右下角朗读设置卡片（音色 / 语速）
                 readThisPageBtn.addEventListener('click', function() {
-                    // Check if speech.js has initSpeechControls function
-                    if (typeof initSpeechControls === 'function') {
-                        initSpeechControls();
-                        // Start reading if possible
-                        if (typeof startReading === 'function') {
-                            startReading();
-                        }
-                    } else {
-                        alert('阅读功能正在加载中，请稍候重试');
-                    }
+                    toggleSpeechCard();
                 });
                 
                 // Image-based PDF export function
@@ -492,6 +483,115 @@
             window.addEventListener('hashchange', function() {
                 checkContentLoaded();
             });
+        </script>
+        <!-- ==================== 朗读设置卡片（右下角，可隐藏） ==================== -->
+        <style>
+            #speech-card{position:fixed;right:10px;bottom:10px;z-index:9999;width:250px;background:rgba(255,255,255,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);font-family:inherit;font-size:13px;color:#495057}
+            #speech-card .sc-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-radius:10px 10px 0 0;background:#f8f9fa;font-weight:600}
+            #speech-card .sc-x{cursor:pointer;font-size:16px;color:#6c757d;padding:0 4px;line-height:1}
+            #speech-card .sc-x:hover{color:#212529}
+            #speech-card .sc-bd{padding:12px 15px 15px}
+            #speech-card label{display:block;margin:8px 0 4px}
+            #speech-card select{width:100%;padding:6px 8px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;color:#495057}
+            #speech-card input[type=range]{width:100%}
+            #speech-card .sc-btns{display:flex;gap:8px;margin-top:12px}
+            #speech-card .sc-btns button{flex:1;padding:7px 0;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+            #speech-play{background:#3b82f6}#speech-play:hover{background:#2563eb}
+            #speech-stop{background:#6c757d}#speech-stop:hover{background:#545b62}
+        </style>
+        <div id="speech-card" style="display:none">
+            <div class="sc-hd"><span>🔊 朗读设置</span><span class="sc-x" title="隐藏卡片">×</span></div>
+            <div class="sc-bd">
+                <label>音色</label>
+                <select id="speech-voice"></select>
+                <label>语速 <span id="speech-rate-val">1.0</span>x</label>
+                <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1">
+                <div class="sc-btns">
+                    <button id="speech-play">▶ 朗读当前页</button>
+                    <button id="speech-stop">■ 停止</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            // 右下角朗读卡片：音色选择 + 语速调节；右上角「阅读本页」按钮呼出/收起，卡片右上角 × 可隐藏
+            (function() {
+                var card = document.getElementById('speech-card');
+                var voiceSel = document.getElementById('speech-voice');
+                var rateInput = document.getElementById('speech-rate');
+                var rateVal = document.getElementById('speech-rate-val');
+                var playBtn = document.getElementById('speech-play');
+                var queue = [];
+
+                function fillVoices() {
+                    var voices = speechSynthesis.getVoices().slice().sort(function(a, b) {
+                        var az = a.lang && a.lang.toLowerCase().indexOf('zh') === 0 ? 0 : 1;
+                        var bz = b.lang && b.lang.toLowerCase().indexOf('zh') === 0 ? 0 : 1;
+                        return az - bz;
+                    });
+                    if (!voices.length) return;
+                    voiceSel.innerHTML = '';
+                    voices.forEach(function(v) {
+                        var o = document.createElement('option');
+                        o.value = v.name;
+                        o.textContent = v.name + ' (' + v.lang + ')';
+                        voiceSel.appendChild(o);
+                    });
+                }
+                fillVoices();
+                if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = fillVoices;
+
+                rateInput.oninput = function() { rateVal.textContent = parseFloat(rateInput.value).toFixed(1); };
+
+                function currentVoice() {
+                    var name = voiceSel.value;
+                    var list = speechSynthesis.getVoices();
+                    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i];
+                    return null;
+                }
+
+                function speakNext() {
+                    if (!queue.length) { playBtn.textContent = '▶ 朗读当前页'; return; }
+                    var text = queue.shift();
+                    if (!text) { speakNext(); return; }
+                    var u = new SpeechSynthesisUtterance(text);
+                    var v = currentVoice();
+                    if (v) { u.voice = v; u.lang = v.lang; }
+                    u.rate = parseFloat(rateInput.value) || 1;
+                    u.onend = speakNext;
+                    u.onerror = function() { queue = []; playBtn.textContent = '▶ 朗读当前页'; };
+                    speechSynthesis.speak(u);
+                }
+
+                playBtn.onclick = function() {
+                    var sec = document.querySelector('.markdown-section');
+                    if (!sec) { alert('未找到要朗读的内容'); return; }
+                    stopSpeech();
+                    var text = sec.textContent.replace(/\s+/g, ' ').trim();
+                    if (!text) { alert('当前页面没有可朗读的文字'); return; }
+                    // 分句排队朗读，避免长文本被浏览器 TTS 截断
+                    queue = text.split(/(?<=[。！？!?；;.])\s*/).filter(function(s) { return s.length > 1; });
+                    playBtn.textContent = '⏳ 朗读中...';
+                    speakNext();
+                };
+
+                function stopSpeech() {
+                    queue = [];
+                    speechSynthesis.cancel();
+                    playBtn.textContent = '▶ 朗读当前页';
+                }
+                var stopBtn = document.getElementById('speech-stop');
+                stopBtn.onclick = stopSpeech;
+
+                window.toggleSpeechCard = function() {
+                    card.style.display = (card.style.display === 'none') ? 'block' : 'none';
+                };
+                card.querySelector('.sc-x').onclick = function() {
+                    stopSpeech();
+                    card.style.display = 'none';
+                };
+                // 切换页面（docsify hash 路由）时停止朗读
+                window.addEventListener('hashchange', stopSpeech);
+            })();
         </script>
     </body>
 </html>
