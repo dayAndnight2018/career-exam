@@ -91,7 +91,6 @@
         <script src="//dayandnight2018.github.io/lib/js/count.js"></script>
         <!-- code highlight -->
         <script src="//dayandnight2018.github.io/lib/js/prism-java.js"></script>
-        <script src="//dayandnight2018.github.io/lib/js/speech.js"></script>
         <script src="//dayandnight2018.github.io/lib/js/reading-mode.js"></script>
         
         <!-- Export to PDF dependencies -->
@@ -207,39 +206,6 @@
                     this.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
                 });
                 
-                // Create reading mode button
-                const readingModeBtn = document.createElement('button');
-                readingModeBtn.className = 'export-pdf-btn reading-mode-btn';
-                readingModeBtn.innerHTML = '📖 阅读';
-                readingModeBtn.style.cssText = `
-                    padding: 8px 16px;
-                    background-color: #8b5cf6;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 600;
-                    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-                    transition: all 0.3s ease;
-                    width: 100%;
-                    text-align: center;
-                    font-family: inherit;
-                `;
-                
-                // Add hover effect for reading mode button
-                readingModeBtn.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#7c3aed';
-                    this.style.transform = 'translateY(-1px)';
-                    this.style.boxShadow = '0 3px 12px rgba(139, 92, 246, 0.4)';
-                });
-                
-                readingModeBtn.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '#8b5cf6';
-                    this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '0 2px 8px rgba(139, 92, 246, 0.3)';
-                });
-                
                 // Create read this page button
                 const readThisPageBtn = document.createElement('button');
                 readThisPageBtn.className = 'read-this-page-btn';
@@ -275,16 +241,10 @@
                 
                 // Append buttons to control panel
                 buttonsContainer.appendChild(imageExportBtn);
-                buttonsContainer.appendChild(readingModeBtn);
                 buttonsContainer.appendChild(readThisPageBtn);
                 
                 // Append control panel to document
                 document.body.appendChild(controlPanelContainer);
-                
-                // Add event listeners for reading mode
-                readingModeBtn.addEventListener('click', function() {
-                    toggleReadingMode();
-                });
                 
                 // Add event listener for read this page —— 呼出右下角朗读设置卡片（音色 / 语速）
                 readThisPageBtn.addEventListener('click', function() {
@@ -484,113 +444,144 @@
                 checkContentLoaded();
             });
         </script>
-        <!-- ==================== 朗读设置卡片（右下角，可隐藏） ==================== -->
+        <!-- ==================== 朗读控制卡片（右下角，可隐藏）—— 控件与功能沿用原 speech.js 卡片 ==================== -->
         <style>
-            #speech-card{position:fixed;right:10px;bottom:10px;z-index:9999;width:250px;background:rgba(255,255,255,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);font-family:inherit;font-size:13px;color:#495057}
+            #speech-card{position:fixed;right:10px;bottom:10px;z-index:9999;width:270px;background:rgba(255,255,255,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);font-family:inherit;font-size:13px;color:#495057}
             #speech-card .sc-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-radius:10px 10px 0 0;background:#f8f9fa;font-weight:600}
             #speech-card .sc-x{cursor:pointer;font-size:16px;color:#6c757d;padding:0 4px;line-height:1}
             #speech-card .sc-x:hover{color:#212529}
             #speech-card .sc-bd{padding:12px 15px 15px}
-            #speech-card label{display:block;margin:8px 0 4px}
+            #speech-card .sc-btns{display:flex;gap:8px}
+            #speech-card .sc-btn{flex:1;display:flex;align-items:center;justify-content:center;padding:7px 0;border:1px solid #ced4da;border-radius:6px;background:#fff;color:#3b82f6;cursor:pointer;transition:all .2s ease}
+            #speech-card .sc-btn:hover:not(:disabled){background:#3b82f6;color:#fff;border-color:#3b82f6}
+            #speech-card .sc-btn:disabled{opacity:.4;cursor:not-allowed}
+            #speech-card label{display:block;margin:10px 0 4px}
             #speech-card select{width:100%;padding:6px 8px;border:1px solid #ced4da;border-radius:6px;font-size:12px;background:#fff;color:#495057}
             #speech-card input[type=range]{width:100%}
-            #speech-card .sc-btns{display:flex;gap:8px;margin-top:12px}
-            #speech-card .sc-btns button{flex:1;padding:7px 0;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
-            #speech-play{background:#3b82f6}#speech-play:hover{background:#2563eb}
-            #speech-stop{background:#6c757d}#speech-stop:hover{background:#545b62}
         </style>
         <div id="speech-card" style="display:none">
-            <div class="sc-hd"><span>🔊 朗读设置</span><span class="sc-x" title="隐藏卡片">×</span></div>
+            <div class="sc-hd"><span>🔊 朗读控制</span><span class="sc-x" title="隐藏卡片">×</span></div>
             <div class="sc-bd">
+                <div class="sc-btns">
+                    <button id="speech-toggle" class="sc-btn" title="开始朗读"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
+                    <button id="speech-pause" class="sc-btn" title="暂停朗读" disabled><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></button>
+                    <button id="speech-resume" class="sc-btn" title="继续朗读" disabled><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+                    <button id="speech-stop" class="sc-btn" title="停止朗读" disabled><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg></button>
+                </div>
                 <label>音色</label>
                 <select id="speech-voice"></select>
                 <label>语速 <span id="speech-rate-val">1.0</span>x</label>
                 <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1">
-                <div class="sc-btns">
-                    <button id="speech-play">▶ 朗读当前页</button>
-                    <button id="speech-stop">■ 停止</button>
-                </div>
+                <label>音调 <span id="speech-pitch-val">1.0</span></label>
+                <input type="range" id="speech-pitch" min="0.5" max="2" step="0.1" value="1">
             </div>
         </div>
         <script>
-            // 右下角朗读卡片：音色选择 + 语速调节；右上角「阅读本页」按钮呼出/收起，卡片右上角 × 可隐藏
+            // 右下角朗读控制卡片：开始/暂停/继续/停止 + 音色/语速/音调（与原 speech.js 卡片一致）
+            // 由右上角「阅读本页」呼出；× 隐藏；切换页面自动停止
             (function() {
                 var card = document.getElementById('speech-card');
+                var toggleBtn = document.getElementById('speech-toggle');
+                var pauseBtn = document.getElementById('speech-pause');
+                var resumeBtn = document.getElementById('speech-resume');
+                var stopBtn = document.getElementById('speech-stop');
                 var voiceSel = document.getElementById('speech-voice');
                 var rateInput = document.getElementById('speech-rate');
                 var rateVal = document.getElementById('speech-rate-val');
-                var playBtn = document.getElementById('speech-play');
-                var queue = [];
+                var pitchInput = document.getElementById('speech-pitch');
+                var pitchVal = document.getElementById('speech-pitch-val');
+                var queue = [], gen = 0;
 
+                // 音色列表：中文优先（偏好 晓晓/Xiaoxiao），分隔线后列英文，与原卡片一致
                 function fillVoices() {
-                    var voices = speechSynthesis.getVoices().slice().sort(function(a, b) {
-                        var az = a.lang && a.lang.toLowerCase().indexOf('zh') === 0 ? 0 : 1;
-                        var bz = b.lang && b.lang.toLowerCase().indexOf('zh') === 0 ? 0 : 1;
-                        return az - bz;
-                    });
+                    var voices = speechSynthesis.getVoices();
                     if (!voices.length) return;
                     voiceSel.innerHTML = '';
+                    var zh = [], en = [];
                     voices.forEach(function(v) {
+                        if (/^zh/i.test(v.lang)) zh.push(v);
+                        else if (/^en/i.test(v.lang)) en.push(v);
+                    });
+                    if (!zh.length && !en.length) voices.forEach(function(v) { zh.push(v); });
+                    var preferred = -1;
+                    function add(v) {
                         var o = document.createElement('option');
                         o.value = v.name;
                         o.textContent = v.name + ' (' + v.lang + ')';
+                        if (v.name === 'Xiaoxiao' || v.name.indexOf('晓') >= 0) preferred = voiceSel.options.length;
                         voiceSel.appendChild(o);
-                    });
+                    }
+                    zh.forEach(add);
+                    if (en.length) {
+                        var sep = document.createElement('option');
+                        sep.textContent = '──────────';
+                        sep.disabled = true;
+                        voiceSel.appendChild(sep);
+                        en.forEach(add);
+                    }
+                    if (preferred >= 0) voiceSel.selectedIndex = preferred;
                 }
                 fillVoices();
                 if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = fillVoices;
 
                 rateInput.oninput = function() { rateVal.textContent = parseFloat(rateInput.value).toFixed(1); };
+                pitchInput.oninput = function() { pitchVal.textContent = parseFloat(pitchInput.value).toFixed(1); };
 
                 function currentVoice() {
-                    var name = voiceSel.value;
                     var list = speechSynthesis.getVoices();
-                    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i];
+                    for (var i = 0; i < list.length; i++) if (list[i].name === voiceSel.value) return list[i];
                     return null;
                 }
 
+                function setState(t, p, r, s) {
+                    toggleBtn.disabled = t; pauseBtn.disabled = p; resumeBtn.disabled = r; stopBtn.disabled = s;
+                }
+
+                function reset() {
+                    gen++; queue = [];
+                    setState(false, true, true, true);
+                }
+
                 function speakNext() {
-                    if (!queue.length) { playBtn.textContent = '▶ 朗读当前页'; return; }
+                    if (!queue.length) { reset(); return; }
                     var text = queue.shift();
                     if (!text) { speakNext(); return; }
+                    var myGen = gen;
                     var u = new SpeechSynthesisUtterance(text);
                     var v = currentVoice();
                     if (v) { u.voice = v; u.lang = v.lang; }
                     u.rate = parseFloat(rateInput.value) || 1;
-                    u.onend = speakNext;
-                    u.onerror = function() { queue = []; playBtn.textContent = '▶ 朗读当前页'; };
+                    u.pitch = parseFloat(pitchInput.value) || 1;
+                    u.onend = function() { if (myGen === gen) speakNext(); };
+                    u.onerror = function() { if (myGen === gen) reset(); };
                     speechSynthesis.speak(u);
                 }
 
-                playBtn.onclick = function() {
+                toggleBtn.onclick = function() {
                     var sec = document.querySelector('.markdown-section');
                     if (!sec) { alert('未找到要朗读的内容'); return; }
-                    stopSpeech();
+                    reset();   // 使上一轮队列与回调失效
                     var text = sec.textContent.replace(/\s+/g, ' ').trim();
                     if (!text) { alert('当前页面没有可朗读的文字'); return; }
                     // 分句排队朗读，避免长文本被浏览器 TTS 截断
                     queue = text.split(/(?<=[。！？!?；;.])\s*/).filter(function(s) { return s.length > 1; });
-                    playBtn.textContent = '⏳ 朗读中...';
+                    setState(true, false, true, false);
                     speakNext();
                 };
-
-                function stopSpeech() {
-                    queue = [];
-                    speechSynthesis.cancel();
-                    playBtn.textContent = '▶ 朗读当前页';
-                }
-                var stopBtn = document.getElementById('speech-stop');
-                stopBtn.onclick = stopSpeech;
+                pauseBtn.onclick = function() { speechSynthesis.pause(); setState(true, true, false, false); };
+                resumeBtn.onclick = function() { speechSynthesis.resume(); setState(true, false, true, false); };
+                stopBtn.onclick = function() { speechSynthesis.cancel(); reset(); };
 
                 window.toggleSpeechCard = function() {
                     card.style.display = (card.style.display === 'none') ? 'block' : 'none';
                 };
                 card.querySelector('.sc-x').onclick = function() {
-                    stopSpeech();
+                    speechSynthesis.cancel();
+                    reset();
                     card.style.display = 'none';
                 };
                 // 切换页面（docsify hash 路由）时停止朗读
-                window.addEventListener('hashchange', stopSpeech);
+                window.addEventListener('hashchange', function() { speechSynthesis.cancel(); reset(); });
             })();
         </script>
     </body>
