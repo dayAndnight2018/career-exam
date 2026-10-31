@@ -444,7 +444,7 @@
                 checkContentLoaded();
             });
         </script>
-        <!-- ==================== 朗读控制卡片（右下角，可隐藏）—— 控件沿用原 speech.js 卡片，支持朗读进度高亮 ==================== -->
+        <!-- ==================== 朗读控制卡片（右下角，可隐藏）—— 预排队连播 + 进度高亮（偏移定位，必中） ==================== -->
         <style>
             #speech-card{position:fixed;right:10px;bottom:10px;z-index:9999;width:270px;background:rgba(255,255,255,.97);border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);font-family:inherit;font-size:13px;color:#495057}
             #speech-card .sc-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 15px;border-radius:10px 10px 0 0;background:#f8f9fa;font-weight:600}
@@ -462,7 +462,7 @@
             .markdown-section .sc-reading{background-color:rgba(255,235,59,.6);color:#c62828;font-weight:600;border-radius:3px;box-shadow:0 1px 6px rgba(255,193,7,.45);transition:background-color .25s ease,color .25s ease}
         </style>
         <div id="speech-card" style="display:none">
-            <div class="sc-hd"><span>🔊 朗读控制</span><span class="sc-x" title="隐藏卡片">×</span></div>
+            <div class="sc-hd"><span>🔊 朗读控制</span><span class="sc-x" title="隐藏卡片（不打断朗读）">×</span></div>
             <div class="sc-bd">
                 <div class="sc-btns">
                     <button id="speech-toggle" class="sc-btn" title="开始朗读"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
@@ -479,8 +479,9 @@
             </div>
         </div>
         <script>
-            // 右下角朗读控制卡片：开始/暂停/继续/停止 + 音色/语速/音调
-            // 朗读进度高亮：当前句加 .sc-reading（黄底红字加粗），读完自动恢复；自动滚动跟随
+            // 右下角朗读控制卡片：开始/暂停/继续/停止 + 音色/语速/音调 + 进度高亮
+            // 连续性：滑动窗口预入队 QUEUE_AHEAD 句，浏览器排队连播，句间无 JS 往返停顿
+            // 高亮：与分句用同一份文本流、按绝对偏移定位，每句 onstart 时高亮 == 正在朗读的那句
             (function() {
                 var card = document.getElementById('speech-card');
                 var toggleBtn = document.getElementById('speech-toggle');
@@ -492,9 +493,12 @@
                 var rateVal = document.getElementById('speech-rate-val');
                 var pitchInput = document.getElementById('speech-pitch');
                 var pitchVal = document.getElementById('speech-pitch-val');
-                var sentences = [], cursor = 0, gen = 0;
 
-                // 音色列表：中文优先（偏好 晓晓/Xiaoxiao），分隔线后列英文，与原卡片一致
+                var QUEUE_AHEAD = 4;         // 预入队句数：太小仍有句间停顿，太大取消时略卡
+                var sents = [];             // [{text, start}] 绝对偏移
+                var qHead = 0, done = 0, gen = 0;
+
+                // 音色列表：中文优先（偏好 晓晓/Xiaoxiao），分隔线后列英文
                 function fillVoices() {
                     var voices = speechSynthesis.getVoices();
                     if (!voices.length) return;
@@ -539,9 +543,7 @@
                     toggleBtn.disabled = t; pauseBtn.disabled = p; resumeBtn.disabled = r; stopBtn.disabled = s;
                 }
 
-                // ---------- 朗读进度高亮 ----------
-                var wrapped = [];   // 当前包裹的高亮 span，用于恢复原样
-
+                // ---------- 文本流收集（分句与高亮定位共用，保证偏移一致） ----------
                 function collectText(root) {
                     var nodes = [], stream = '';
                     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -562,6 +564,22 @@
                     return { nodes: nodes, stream: stream };
                 }
 
+                function splitSentences(stream) {
+                    // 掩码字母/数字间的 "."（3.5、a.b），等长替换不改变偏移
+                    var masked = stream.replace(/(?<=[0-9A-Za-z])\.(?=[0-9A-Za-z])/g, '\u0001');
+                    var out = [], re = /[^。！？!?；;.]+(?:[。！？!?；;]+|\.(?=\s|$))*\s*/g, m;
+                    while ((m = re.exec(masked))) {
+                        var raw = stream.substring(m.index, m.index + m[0].length);   // 文本取自原始流
+                        if (raw.trim().length > 1) out.push({ text: raw, start: m.index });
+                        if (re.lastIndex === m.index) re.lastIndex++;
+                    }
+                    if (!out.length && stream.trim()) out.push({ text: stream, start: 0 });
+                    return out;
+                }
+
+                // ---------- 高亮 ----------
+                var wrapped = [];
+
                 function clearHighlight() {
                     wrapped.forEach(function(span) {
                         var parent = span.parentNode;
@@ -572,11 +590,17 @@
                     wrapped = [];
                 }
 
-                // 高亮 stream 中 [start,end) 区间：按文本节点切分并包裹 span
-                function highlightRange(nodes, start, end) {
+                function highlightRange(start, end) {
+                    var map = collectText(document.querySelector('.markdown-section') || document.body);
+                    // DOM 被重渲染导致流变化时，按内容回退定位；仍找不到则跳过高亮，朗读不受影响
+                    if (map.stream.length !== baseStreamLen) {
+                        var idx = map.stream.indexOf(currentSentText);
+                        if (idx === -1) return;
+                        start = idx; end = idx + currentSentText.length;
+                    }
                     clearHighlight();
-                    for (var i = 0; i < nodes.length; i++) {
-                        var rec = nodes[i], nLen = rec.node.nodeValue.length;
+                    for (var i = 0; i < map.nodes.length; i++) {
+                        var rec = map.nodes[i], nLen = rec.node.nodeValue.length;
                         var nStart = rec.start, nEnd = rec.start + nLen;
                         if (nEnd <= start) continue;
                         if (nStart >= end) break;
@@ -594,76 +618,83 @@
                     }
                     if (wrapped.length) {
                         var top = wrapped[0].getBoundingClientRect().top;
-                        // 仅当高亮句离开可视区域时滚动跟随，减少打扰
                         if (top < 60 || top > window.innerHeight - 120) {
                             wrapped[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
                         }
                     }
                 }
 
-                // ---------- 句子切分与朗读 ----------
-                function splitSentences(s) {
-                    var out = [], re = /[^。！？!?；;.]+[。！？!?；;.]*\s*/g, m;
-                    while ((m = re.exec(s))) {
-                        if (m[0].trim().length > 1) out.push(m[0]);
-                        if (re.lastIndex === m.index) re.lastIndex++;
-                    }
-                    return out;
-                }
+                var baseStreamLen = 0, currentSentText = '';
 
-                function reset() {
-                    gen++; sentences = []; cursor = 0;
-                    clearHighlight();
-                    setState(false, true, true, true);
-                }
-
-                function speakNext() {
-                    if (!sentences.length) { reset(); return; }
-                    var sent = sentences.shift();
-                    var myGen = gen;
-                    // 在正文中定位该句并高亮（每次重新收集，避免 DOM 结构变化导致偏移失效）
-                    var map = collectText(document.querySelector('.markdown-section') || document.body);
-                    var start = map.stream.indexOf(sent, cursor);
-                    if (start === -1) start = map.stream.indexOf(sent);
-                    if (start >= 0) highlightRange(map.nodes, start, start + sent.length);
-                    cursor = (start >= 0 ? start : 0) + sent.length;
-
-                    var u = new SpeechSynthesisUtterance(sent.replace(/\s+/g, ' ').trim());
+                // ---------- 朗读引擎：滑动窗口预入队 ----------
+                function makeUtterance(i) {
+                    var s = sents[i];
+                    var u = new SpeechSynthesisUtterance(s.text.replace(/\s+/g, ' ').trim());
                     var v = currentVoice();
                     if (v) { u.voice = v; u.lang = v.lang; }
                     u.rate = parseFloat(rateInput.value) || 1;
                     u.pitch = parseFloat(pitchInput.value) || 1;
-                    u.onend = function() { if (myGen === gen) speakNext(); };       // 读完切下一句，高亮随之更新
-                    u.onerror = function() { if (myGen === gen) reset(); };         // 出错恢复原样
-                    speechSynthesis.speak(u);
+                    var myGen = gen;
+                    u.onstart = function() {
+                        if (myGen !== gen) return;
+                        currentSentText = s.text;
+                        highlightRange(s.start, s.start + s.text.length);   // 高亮 == 正在听到的那句
+                    };
+                    u.onend = function() { if (myGen === gen) advance(); };
+                    u.onerror = function() { if (myGen === gen) advance(); };
+                    return u;
+                }
+
+                function advance() {
+                    done++;
+                    topUp();
+                    if (done >= sents.length) {   // 全部读完：恢复正文与按钮
+                        gen++;
+                        clearHighlight();
+                        setState(false, true, true, true);
+                    }
+                }
+
+                function topUp() {
+                    while (qHead < sents.length && qHead - done < QUEUE_AHEAD) {
+                        speechSynthesis.speak(makeUtterance(qHead));
+                        qHead++;
+                    }
+                }
+
+                function reset() {
+                    gen++;
+                    speechSynthesis.cancel();
+                    clearHighlight();
+                    sents = []; qHead = 0; done = 0;
+                    setState(false, true, true, true);
                 }
 
                 toggleBtn.onclick = function() {
                     var sec = document.querySelector('.markdown-section');
                     if (!sec) { alert('未找到要朗读的内容'); return; }
-                    reset();   // 使上一轮队列、回调与高亮失效
-                    var text = sec.textContent.replace(/\s+/g, ' ').trim();
+                    reset();
+                    var map = collectText(sec);
+                    var text = map.stream.replace(/\s+/g, ' ').trim();
                     if (!text) { alert('当前页面没有可朗读的文字'); return; }
-                    // 分句排队朗读，避免长文本被浏览器 TTS 截断
-                    sentences = splitSentences(sec.textContent);
-                    if (!sentences.length) sentences = [text];
+                    baseStreamLen = map.stream.length;
+                    sents = splitSentences(map.stream);   // 与高亮共用同一份流，偏移必中
+                    qHead = 0; done = 0;
                     setState(true, false, true, false);
-                    speakNext();
+                    topUp();
                 };
-                pauseBtn.onclick = function() { speechSynthesis.pause(); setState(true, true, false, false); };   // 暂停时保留高亮，便于看到读到哪
+                pauseBtn.onclick = function() { speechSynthesis.pause(); setState(true, true, false, false); };   // 暂停保留高亮
                 resumeBtn.onclick = function() { speechSynthesis.resume(); setState(true, false, true, false); };
-                stopBtn.onclick = function() { speechSynthesis.cancel(); reset(); };
+                stopBtn.onclick = reset;
 
                 window.toggleSpeechCard = function() {
                     card.style.display = (card.style.display === 'none') ? 'block' : 'none';
                 };
                 card.querySelector('.sc-x').onclick = function() {
-                    speechSynthesis.cancel();
-                    reset();
-                    card.style.display = 'none';
+                    card.style.display = 'none';   // 仅隐藏卡片：不打断朗读，可再次呼出继续操作
                 };
                 // 切换页面（docsify hash 路由）时停止朗读并恢复高亮
-                window.addEventListener('hashchange', function() { speechSynthesis.cancel(); reset(); });
+                window.addEventListener('hashchange', reset);
             })();
         </script>
     </body>
