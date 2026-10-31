@@ -591,6 +591,9 @@
                 }
 
                 function highlightRange(start, end) {
+                    // 必须先恢复上一句高亮、再收集节点：clearHighlight 的 normalize() 会合并/替换
+                    // 文本节点，若先收集，失效的节点引用会让后续包裹静默失败（表现为部分句子无高亮）
+                    clearHighlight();
                     var map = collectText(document.querySelector('.markdown-section') || document.body);
                     // DOM 被重渲染导致流变化时，按内容回退定位；仍找不到则跳过高亮，朗读不受影响
                     if (map.stream.length !== baseStreamLen) {
@@ -598,7 +601,6 @@
                         if (idx === -1) return;
                         start = idx; end = idx + currentSentText.length;
                     }
-                    clearHighlight();
                     for (var i = 0; i < map.nodes.length; i++) {
                         var rec = map.nodes[i], nLen = rec.node.nodeValue.length;
                         var nStart = rec.start, nEnd = rec.start + nLen;
